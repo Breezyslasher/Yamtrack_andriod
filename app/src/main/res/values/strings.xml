@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Yamtrack</string>
+    
+    <!-- Login -->
+    <string name="login">Login</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="api_token">API Token</string>
+    <string name="server_url">Server URL</string>
+    <string name="server_settings">Server Settings</string>
+    <string name="current_server">Server: %1$s</string>
+    <string name="demo_credentials_hint">Demo: username \"%1$s\", password \"%2$s\"</string>
+    
+    <!-- Navigation -->
+    <string name="home">Home</string>
+    <string name="library">Library</string>
+    <string name="search">Search</string>
+    <string name="settings">Settings</string>
+    
+    <!-- Media Types -->
+    <string name="movies">Movies</string>
+    <string name="tv_shows">TV Shows</string>
+    <string name="anime">Anime</string>
+    <string name="manga">Manga</string>
+    <string name="games">Games</string>
+    <string name="books">Books</string>
+    <string name="comics">Comics</string>
+    
+    <!-- Status -->
+    <string name="in_progress">In Progress</string>
+    <string name="completed">Completed</string>
+    <string name="planning">Planning</string>
+    <string name="paused">Paused</string>
+    <string name="dropped">Dropped</string>
+    <string name="all">All</string>
+    
+    <!-- Actions -->
+    <string name="add_to_library">Add to Library</string>
+    <string name="remove_from_library">Remove from Library</string>
+    <string name="update_status">Update Status</string>
+    <string name="logout">Logout</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    
+    <!-- Settings -->
+    <string name="dark_mode">Dark Mode</string>
+    <string name="show_adult_content">Show Adult Content</string>
+    <string name="notifications">Notifications</string>
+    <string name="export_data">Export Data</string>
+    <string name="import_data">Import Data</string>
+    <string name="about">About</string>
+    <string name="version">Version</string>
+    <string name="version_format">Version %1$s</string>
+    
+    <!-- Messages -->
+    <string name="no_media_found">No media found</string>
+    <string name="search_hint">Search for media…</string>
+    <string name="loading">Loading…</string>
+    <string name="error_network">Network error. Please try again.</string>
+    <string name="error_login">Login failed. Please check your credentials.</string>
+</resources>

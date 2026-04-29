@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary">#E94560</color>
+    <color name="primary_dark">#C73E54</color>
+    <color name="primary_light">#FF6B7A</color>
+
+    <!-- Background Colors -->
+    <color name="background">#1A1A2E</color>
+    <color name="surface">#16213E</color>
+    <color name="surface_light">#1F3352</color>
+
+    <!-- Text Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0B0B0</color>
+    <color name="text_hint">#707070</color>
+
+    <!-- Other Colors -->
+    <color name="divider">#2D2D44</color>
+    <color name="gold">#FFD700</color>
+    <color name="success">#4CAF50</color>
+    <color name="error">#F44336</color>
+    <color name="warning">#FF9800</color>
+
+    <!-- Status Colors -->
+    <color name="status_watching">#4CAF50</color>
+    <color name="status_completed">#2196F3</color>
+    <color name="status_planning">#9C27B0</color>
+    <color name="status_paused">#FF9800</color>
+    <color name="status_dropped">#F44336</color>
+</resources>

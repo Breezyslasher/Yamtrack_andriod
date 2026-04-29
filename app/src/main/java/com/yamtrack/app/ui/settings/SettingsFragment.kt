@@ -1,0 +1,153 @@
+package com.yamtrack.app.ui.settings
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import com.yamtrack.app.BuildConfig
+import com.yamtrack.app.R
+import com.yamtrack.app.databinding.FragmentSettingsBinding
+import com.yamtrack.app.ui.login.LoginActivity
+import dagger.hilt.android.AndroidEntryPoint
+
+@AndroidEntryPoint
+class SettingsFragment : Fragment() {
+
+    private var _binding: FragmentSettingsBinding? = null
+    private val binding get() = _binding!!
+
+    private val viewModel: SettingsViewModel by viewModels()
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentSettingsBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupUI()
+        observeViewModel()
+    }
+
+    private fun setupUI() {
+        // Server Settings
+        binding.layoutServerUrl.setOnClickListener { showServerUrlDialog() }
+
+        // App Settings
+        binding.switchDarkMode.isChecked = true
+        binding.switchDarkMode.isEnabled = false
+
+        binding.switchAdultContent.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setShowAdultContent(isChecked)
+        }
+
+        binding.switchNotifications.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setNotificationsEnabled(isChecked)
+        }
+
+        // Account
+        binding.layoutExport.setOnClickListener {
+            Toast.makeText(requireContext(), 
+                "Use your server's web UI to export data.", 
+                Toast.LENGTH_LONG).show()
+        }
+
+        binding.layoutImport.setOnClickListener {
+            Toast.makeText(requireContext(), 
+                "Use your server's web UI to import data.", 
+                Toast.LENGTH_LONG).show()
+        }
+
+        // Logout
+        binding.btnLogout.setOnClickListener { showLogoutConfirmation() }
+
+        // About
+        binding.tvVersion.text = getString(R.string.version_format, BuildConfig.VERSION_NAME)
+    }
+
+    private fun observeViewModel() {
+        viewModel.serverUrl.observe(viewLifecycleOwner) { url ->
+            binding.tvServerUrl.text = url
+        }
+
+        viewModel.showAdultContent.observe(viewLifecycleOwner) { show ->
+            binding.switchAdultContent.isChecked = show
+        }
+
+        viewModel.notificationsEnabled.observe(viewLifecycleOwner) { enabled ->
+            binding.switchNotifications.isChecked = enabled
+        }
+
+        viewModel.logoutComplete.observe(viewLifecycleOwner) { complete ->
+            if (complete) navigateToLogin()
+        }
+    }
+
+    private fun showServerUrlDialog() {
+        val editText = EditText(requireContext()).apply {
+            setText(viewModel.serverUrl.value)
+            hint = "https://yamtrack.example.com"
+            setPadding(48, 32, 48, 32)
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.server_url)
+            .setMessage("Changing the server will log you out.")
+            .setView(editText)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val newUrl = editText.text.toString().trim()
+                if (newUrl.isNotEmpty()) {
+                    viewModel.setServerUrl(newUrl)
+                    Toast.makeText(
+                        requireContext(),
+                        "Server URL updated. Please login again.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    viewModel.logout()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton("Reset Default") { _, _ ->
+                viewModel.setServerUrl(BuildConfig.DEFAULT_SERVER_URL)
+                Toast.makeText(
+                    requireContext(),
+                    "Server URL reset. Please login again.",
+                    Toast.LENGTH_LONG
+                ).show()
+                viewModel.logout()
+            }
+            .show()
+    }
+
+    private fun showLogoutConfirmation() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.logout)
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton(R.string.logout) { _, _ -> viewModel.logout() }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun navigateToLogin() {
+        val intent = Intent(requireContext(), LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        activity?.finish()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+}
