@@ -26,6 +26,7 @@ class LibraryViewModel @Inject constructor(
 
     private var currentMediaType: MediaType = MediaType.MOVIE
     private var currentStatus: MediaStatus? = null   // null == ALL
+    private var currentSort: String = "added_desc"   // newest-first by default
 
     init {
         loadMedia()
@@ -45,6 +46,15 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    fun setSort(sort: String) {
+        if (currentSort != sort) {
+            currentSort = sort
+            loadMedia()
+        }
+    }
+
+    fun currentSort(): String = currentSort
+
     fun refresh() {
         loadMedia()
     }
@@ -57,6 +67,7 @@ class LibraryViewModel @Inject constructor(
             val result = repository.getMediaByType(
                 mediaType = currentMediaType,
                 status = currentStatus,
+                sort = currentSort,
                 limit = 100
             )
             _mediaList.value = result

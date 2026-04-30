@@ -24,6 +24,14 @@
     <string name="books">Books</string>
     <string name="comics">Comics</string>
     
+    <!-- Sort -->
+    <string name="sort">Sort</string>
+    <string name="sort_recently_added">Recently Added</string>
+    <string name="sort_oldest_added">Oldest Added</string>
+    <string name="sort_recently_updated">Recently Updated</string>
+    <string name="sort_title_az">Title (A–Z)</string>
+    <string name="sort_title_za">Title (Z–A)</string>
+
     <!-- Status -->
     <string name="in_progress">In Progress</string>
     <string name="completed">Completed</string>

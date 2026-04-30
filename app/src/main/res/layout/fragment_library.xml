@@ -40,6 +40,20 @@
                 app:singleSelection="true" />
         </HorizontalScrollView>
 
+        <!-- Sort Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSort"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="4dp"
+            android:text="@string/sort_recently_added"
+            android:textAllCaps="false"
+            app:icon="@drawable/ic_chevron_down"
+            app:iconGravity="end" />
+
         <!-- Media Grid -->
         <FrameLayout
             android:layout_width="match_parent"
