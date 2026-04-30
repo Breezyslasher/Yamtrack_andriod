@@ -24,6 +24,9 @@ class MediaDetailsViewModel @Inject constructor(
     private val _removeResult = MutableLiveData<OperationResult>()
     val removeResult: LiveData<OperationResult> = _removeResult
 
+    private val _recommendations = MutableLiveData<List<SearchResult>>(emptyList())
+    val recommendations: LiveData<List<SearchResult>> = _recommendations
+
     private var currentMediaType: MediaType = MediaType.MOVIE
     private var currentSource: String = "tmdb"
     private var currentMediaId: String = ""
@@ -36,6 +39,18 @@ class MediaDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             _details.value = Result.Loading
             _details.value = repository.getMediaDetails(mediaType, source, mediaId)
+        }
+        loadRecommendations()
+    }
+
+    private fun loadRecommendations() {
+        viewModelScope.launch {
+            when (val result = repository.getMediaRecommendations(
+                currentMediaType, currentSource, currentMediaId
+            )) {
+                is Result.Success -> _recommendations.value = result.data
+                else -> _recommendations.value = emptyList()
+            }
         }
     }
 
@@ -58,7 +73,7 @@ class MediaDetailsViewModel @Inject constructor(
         }
     }
 
-    fun updateScore(score: Double) {
+    fun updateScore(score: Double?) {
         viewModelScope.launch {
             val result = repository.updateMedia(
                 currentMediaType,

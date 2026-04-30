@@ -1,11 +1,15 @@
 package com.yamtrack.app.ui.details
 
+import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.view.View
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import coil.transform.RoundedCornersTransformation
 import com.google.android.material.chip.Chip
@@ -14,6 +18,7 @@ import com.yamtrack.app.data.model.MediaDetails
 import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.model.SearchResult
 import com.yamtrack.app.databinding.ActivityMediaDetailsBinding
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -39,6 +44,8 @@ class MediaDetailsActivity : AppCompatActivity() {
     private lateinit var source: String
     private lateinit var mediaId: String
 
+    private lateinit var recommendationsAdapter: RecommendationsAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMediaDetailsBinding.inflate(layoutInflater)
@@ -52,9 +59,36 @@ class MediaDetailsActivity : AppCompatActivity() {
         setupToolbar()
         setupStatusChips()
         setupButtons()
+        setupRecommendations()
         observeViewModel()
 
         viewModel.loadDetails(mediaType, source, mediaId)
+    }
+
+    private fun setupRecommendations() {
+        recommendationsAdapter = RecommendationsAdapter { rec ->
+            openRecommendation(rec)
+        }
+        binding.rvRecommendations.apply {
+            layoutManager = LinearLayoutManager(
+                this@MediaDetailsActivity,
+                LinearLayoutManager.HORIZONTAL,
+                false
+            )
+            adapter = recommendationsAdapter
+        }
+    }
+
+    private fun openRecommendation(rec: SearchResult) {
+        val type = rec.type ?: return
+        val recSource = rec.source ?: return
+        val recId = rec.mediaId ?: return
+        val intent = Intent(this, MediaDetailsActivity::class.java).apply {
+            putExtra(EXTRA_MEDIA_TYPE, type.value)
+            putExtra(EXTRA_SOURCE, recSource)
+            putExtra(EXTRA_MEDIA_ID, recId)
+        }
+        startActivity(intent)
     }
 
     private fun setupToolbar() {
@@ -85,6 +119,41 @@ class MediaDetailsActivity : AppCompatActivity() {
         binding.btnRemove.setOnClickListener {
             showRemoveConfirmation()
         }
+        binding.tvScore.setOnClickListener {
+            showScoreDialog()
+        }
+    }
+
+    private fun showScoreDialog() {
+        val current = (viewModel.details.value as? Result.Success)?.data?.userScore
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = getString(R.string.set_score_hint)
+            current?.let { setText(String.format("%.1f", it)) }
+        }
+        val padding = (resources.displayMetrics.density * 20).toInt()
+        val container = android.widget.FrameLayout(this).apply {
+            setPadding(padding, padding / 2, padding, 0)
+            addView(input)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.set_score_title)
+            .setView(container)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val raw = input.text.toString().trim()
+                val parsed = raw.toDoubleOrNull()
+                if (parsed == null || parsed < 0.0 || parsed > 10.0) {
+                    Toast.makeText(this, R.string.set_score_hint, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                viewModel.updateScore(parsed)
+            }
+            .setNeutralButton(R.string.clear_score) { _, _ ->
+                viewModel.updateScore(null)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun observeViewModel() {
@@ -128,6 +197,15 @@ class MediaDetailsActivity : AppCompatActivity() {
                 }
             }
         }
+
+        viewModel.recommendations.observe(this) { recs ->
+            recommendationsAdapter.submitList(recs)
+            val visible = recs.isNotEmpty()
+            binding.tvRecommendationsHeader.visibility =
+                if (visible) View.VISIBLE else View.GONE
+            binding.rvRecommendations.visibility =
+                if (visible) View.VISIBLE else View.GONE
+        }
     }
 
     private fun displayDetails(item: MediaDetails) {
@@ -159,13 +237,15 @@ class MediaDetailsActivity : AppCompatActivity() {
             }
 
             // Score: prefer the user's score, fall back to the public score.
+            // Always visible & clickable so the user can tap to rate even when
+            // no score has been set yet.
             val score = item.userScore ?: item.score
-            if (score != null && score > 0) {
-                tvScore.text = String.format("%.1f / 10", score)
-                tvScore.visibility = View.VISIBLE
+            tvScore.text = if (score != null && score > 0) {
+                String.format("%.1f / 10", score)
             } else {
-                tvScore.visibility = View.GONE
+                getString(R.string.tap_to_rate)
             }
+            tvScore.visibility = View.VISIBLE
 
             // Genres come from upstream metadata.
             val genres = item.genres.orEmpty()

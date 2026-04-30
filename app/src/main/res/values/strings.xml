@@ -40,6 +40,13 @@
     <string name="dropped">Dropped</string>
     <string name="all">All</string>
     
+    <!-- Detail screen -->
+    <string name="recommendations">Recommendations</string>
+    <string name="set_score_title">Set your score</string>
+    <string name="set_score_hint">0.0 – 10.0</string>
+    <string name="clear_score">Clear</string>
+    <string name="tap_to_rate">Tap to rate</string>
+
     <!-- Actions -->
     <string name="add_to_library">Add to Library</string>
     <string name="remove_from_library">Remove from Library</string>
