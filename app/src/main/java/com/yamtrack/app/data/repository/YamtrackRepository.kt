@@ -8,9 +8,6 @@ import com.yamtrack.app.data.api.YamtrackApi
 import com.yamtrack.app.data.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.FormBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import retrofit2.Response
 import java.io.IOException
 import javax.inject.Inject
@@ -25,15 +22,14 @@ import javax.inject.Singleton
  * Responsibilities:
  *  - Map HTTP responses + {"detail": "..."} error envelopes to Result<T>.
  *  - Manage the bearer token + base URL providers.
- *  - Provide a fallback `loginWithPassword` that uses Django session login
- *    to scrape the user's API token off /profile/ for the demo server.
+ *
+ * Auth is Bearer / X-API-Key only — the API has no password-grant endpoint.
  */
 @Singleton
 class YamtrackRepository @Inject constructor(
     private val api: YamtrackApi,
     private val tokenProvider: TokenProvider,
     private val baseUrlProvider: BaseUrlProvider,
-    private val okHttpClient: OkHttpClient,
     private val gson: Gson
 ) {
     companion object {
@@ -100,125 +96,6 @@ class YamtrackRepository @Inject constructor(
     private fun restorePrevious(url: String?, token: String?) {
         if (url != null) baseUrlProvider.setBaseUrl(url)
         tokenProvider.setToken(token)
-    }
-
-    /**
-     * Convenience login flow for the demo server: log in via the Django
-     * web UI to set a session cookie, then fetch /profile/ and try to
-     * extract the API token from the rendered HTML.
-     *
-     * The Yamtrack API has no token-issuing endpoint, so this scraping
-     * fallback is the only way to obtain a token from credentials alone.
-     */
-    suspend fun loginWithPassword(
-        serverUrl: String,
-        username: String,
-        password: String
-    ): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val cleanUrl = serverUrl.trimEnd('/')
-            val cookies = mutableMapOf<String, String>()
-
-            // Step 1: GET /accounts/login/ to grab the CSRF token
-            val csrfToken = fetchCsrfToken(cleanUrl, cookies)
-                ?: return@withContext Result.Error("Could not obtain CSRF token from server.")
-
-            // Step 2: POST credentials, follow no redirects so we can detect 302 = success
-            val cookieHeader = cookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
-            val formBody = FormBody.Builder()
-                .add("login", username)
-                .add("password", password)
-                .add("csrfmiddlewaretoken", csrfToken)
-                .build()
-
-            val noRedirectClient = okHttpClient.newBuilder()
-                .followRedirects(false)
-                .followSslRedirects(false)
-                .build()
-
-            val loginRequest = Request.Builder()
-                .url("$cleanUrl/accounts/login/")
-                .header("Cookie", cookieHeader)
-                .header("Referer", "$cleanUrl/accounts/login/")
-                .header("X-CSRFToken", csrfToken)
-                .post(formBody)
-                .build()
-
-            noRedirectClient.newCall(loginRequest).execute().use { response ->
-                response.headers("Set-Cookie").forEach { cookie ->
-                    val parts = cookie.split(";").firstOrNull()?.split("=", limit = 2)
-                    if (parts != null && parts.size == 2) {
-                        cookies[parts[0].trim()] = parts[1].trim()
-                    }
-                }
-
-                if (response.code !in 300..399) {
-                    return@withContext Result.Error("Login failed. Check your username and password.")
-                }
-            }
-
-            // Step 3: GET /profile/ and look for the API token in the markup
-            val profileCookieHeader = cookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
-            val profileRequest = Request.Builder()
-                .url("$cleanUrl/profile/")
-                .header("Cookie", profileCookieHeader)
-                .get()
-                .build()
-
-            okHttpClient.newCall(profileRequest).execute().use { response ->
-                if (!response.isSuccessful) {
-                    return@withContext Result.Error(
-                        "Logged in but could not fetch profile. " +
-                        "Please copy your API token manually."
-                    )
-                }
-                val html = response.body?.string().orEmpty()
-
-                val tokenPatterns = listOf(
-                    Regex("""(?:api[_-]?token|api[_-]?key)["'\s:>]+([a-zA-Z0-9]{32,})""", RegexOption.IGNORE_CASE),
-                    Regex("""<input[^>]*\bvalue=["']([a-zA-Z0-9]{40,})["'][^>]*>"""),
-                    Regex("""<code[^>]*>\s*([a-zA-Z0-9]{40,})\s*</code>""", RegexOption.IGNORE_CASE),
-                    Regex("""id=["']token["'][^>]*>\s*([a-zA-Z0-9]{32,})""", RegexOption.IGNORE_CASE)
-                )
-
-                tokenPatterns.firstNotNullOfOrNull { it.find(html)?.groupValues?.get(1) }
-                    ?.let { return@withContext Result.Success(it) }
-
-                Result.Error(
-                    "Could not auto-detect your API token on the profile page. " +
-                    "Please copy it manually and use the API Token login mode."
-                )
-            }
-        } catch (e: IOException) {
-            Log.e(TAG, "Network error during session login", e)
-            Result.Error("Network error: ${e.message}")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during session login", e)
-            Result.Error("Error: ${e.message ?: "Unknown error"}")
-        }
-    }
-
-    private fun fetchCsrfToken(cleanUrl: String, cookies: MutableMap<String, String>): String? {
-        val request = Request.Builder()
-            .url("$cleanUrl/accounts/login/")
-            .get()
-            .build()
-
-        okHttpClient.newCall(request).execute().use { response ->
-            response.headers("Set-Cookie").forEach { cookie ->
-                val parts = cookie.split(";").firstOrNull()?.split("=", limit = 2)
-                if (parts != null && parts.size == 2) {
-                    cookies[parts[0].trim()] = parts[1].trim()
-                }
-            }
-            cookies["csrftoken"]?.let { return it }
-
-            val html = response.body?.string().orEmpty()
-            val match = Regex(
-                """name=["']csrfmiddlewaretoken["']\s+value=["']([^"']+)["']"""
-            ).find(html)
-            return match?.groupValues?.get(1)
-        }
     }
 
     // ===================== Statistics & info =====================

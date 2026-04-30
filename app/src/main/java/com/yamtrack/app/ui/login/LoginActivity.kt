@@ -16,11 +16,10 @@ import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Login screen for the Yamtrack REST API.
- * 
- * Supports two login flows:
- *   - Token: user pastes an API token copied from the Yamtrack web UI
- *   - Password: legacy username/password login for the demo server;
- *     the app will attempt to fetch the user's token from /profile/
+ *
+ * The Yamtrack API only supports Bearer / X-API-Key auth — there is no
+ * username/password endpoint. Users must paste an API token copied from
+ * the Yamtrack web UI profile page.
  */
 @AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
@@ -36,70 +35,19 @@ class LoginActivity : AppCompatActivity() {
         setupUI()
         observeViewModel()
 
-        // Silently validate any saved session
         viewModel.checkExistingSession()
     }
 
     private fun setupUI() {
-        // Pre-fill demo credentials for convenience
-        binding.etUsername.setText(BuildConfig.DEFAULT_USERNAME)
-        binding.etPassword.setText(BuildConfig.DEFAULT_PASSWORD)
+        binding.tvServerSettings.setOnClickListener { showServerSettingsDialog() }
 
-        // Toggle between token login & password login
-        binding.btnModeToken.setOnClickListener { showTokenMode() }
-        binding.btnModePassword.setOnClickListener { showPasswordMode() }
-
-        // Default to password mode (easier for the demo server)
-        showPasswordMode()
-
-        // Server settings
-        binding.tvServerSettings.setOnClickListener {
-            showServerSettingsDialog()
-        }
-
-        // Login actions
         binding.btnLogin.setOnClickListener {
             val url = viewModel.serverUrl.value ?: BuildConfig.DEFAULT_SERVER_URL
-
-            if (isTokenMode()) {
-                val token = binding.etToken.text.toString().trim()
-                viewModel.loginWithToken(url, token)
-            } else {
-                val username = binding.etUsername.text.toString().trim()
-                val password = binding.etPassword.text.toString()
-                viewModel.loginWithPassword(url, username, password)
-            }
+            val token = binding.etToken.text.toString().trim()
+            viewModel.loginWithToken(url, token)
         }
 
-        binding.tvHowToGetToken.setOnClickListener {
-            showTokenHelpDialog()
-        }
-
-        binding.tvDemoCredentials.text = getString(
-            R.string.demo_credentials_hint,
-            BuildConfig.DEFAULT_USERNAME,
-            BuildConfig.DEFAULT_PASSWORD
-        )
-    }
-
-    private fun isTokenMode(): Boolean = binding.layoutTokenFields.visibility == View.VISIBLE
-
-    private fun showTokenMode() {
-        binding.layoutTokenFields.visibility = View.VISIBLE
-        binding.layoutPasswordFields.visibility = View.GONE
-        binding.btnModeToken.isChecked = true
-        binding.btnModePassword.isChecked = false
-        binding.tvDemoCredentials.visibility = View.GONE
-        binding.tvHowToGetToken.visibility = View.VISIBLE
-    }
-
-    private fun showPasswordMode() {
-        binding.layoutTokenFields.visibility = View.GONE
-        binding.layoutPasswordFields.visibility = View.VISIBLE
-        binding.btnModeToken.isChecked = false
-        binding.btnModePassword.isChecked = true
-        binding.tvDemoCredentials.visibility = View.VISIBLE
-        binding.tvHowToGetToken.visibility = View.GONE
+        binding.tvHowToGetToken.setOnClickListener { showTokenHelpDialog() }
     }
 
     private fun observeViewModel() {

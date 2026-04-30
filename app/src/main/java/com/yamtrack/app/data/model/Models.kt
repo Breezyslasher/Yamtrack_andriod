@@ -28,26 +28,39 @@ enum class MediaType(val value: String, val displayName: String) {
 }
 
 /**
- * Media tracking statuses. The API encodes these as INTEGERS in JSON
- * (see MEDIA_STATUS_MAP in api/helpers.py):
- *   0 = Planning
- *   1 = In progress
- *   2 = Paused
- *   3 = Completed
- *   4 = Dropped
+ * Media tracking statuses.
  *
- * The integer is what gets sent on PATCH and POST too — the server then
- * calls get_media_status(value, reverse=True) to convert it back to a string.
+ * INPUT direction (query params, POST/PATCH bodies): the server's
+ * `parse_status_param` does `int(status)`, then maps to its canonical name
+ * via MEDIA_STATUS_MAP. So the integer code is what we send to the API.
+ *
+ * OUTPUT direction (JSON responses): the server emits the canonical *name*
+ * ("Planning", "In progress", "Paused", "Completed", "Dropped") via
+ * StatusField.to_representation. So we parse responses by name.
+ *
+ * The `apiName` constant is the exact spelling the server returns/expects
+ * — do not touch the casing/spacing.
  */
-enum class MediaStatus(val code: Int, val displayName: String) {
-    PLANNING(0, "Planning"),
-    IN_PROGRESS(1, "In Progress"),
-    PAUSED(2, "Paused"),
-    COMPLETED(3, "Completed"),
-    DROPPED(4, "Dropped");
+enum class MediaStatus(val code: Int, val apiName: String, val displayName: String) {
+    PLANNING(0, "Planning", "Planning"),
+    IN_PROGRESS(1, "In progress", "In Progress"),
+    PAUSED(2, "Paused", "Paused"),
+    COMPLETED(3, "Completed", "Completed"),
+    DROPPED(4, "Dropped", "Dropped");
 
     companion object {
         fun fromCode(code: Int?): MediaStatus? = values().find { it.code == code }
+
+        /**
+         * Match a status returned by the API.
+         * Accepts the canonical name (preferred) or a numeric code-as-string
+         * for forward-compatibility.
+         */
+        fun fromApi(value: String?): MediaStatus? {
+            if (value.isNullOrBlank()) return null
+            values().find { it.apiName.equals(value, ignoreCase = true) }?.let { return it }
+            return value.toIntOrNull()?.let { code -> values().find { it.code == code } }
+        }
 
         /** Pseudo-status for "no filter" — sent as empty string. */
         const val ALL_FILTER_VALUE = ""
@@ -107,7 +120,7 @@ data class MediaItem(
     @SerializedName("tracked") val tracked: Boolean = false,
     @SerializedName("created_at") val createdAt: String? = null,
     @SerializedName("score") val score: Double? = null,
-    @SerializedName("status") val status: Int? = null,
+    @SerializedName("status") val status: String? = null,
     @SerializedName("progress") val progress: Int? = null,
     @SerializedName("progressed_at") val progressedAt: String? = null,
     @SerializedName("start_date") val startDate: String? = null,
@@ -116,7 +129,7 @@ data class MediaItem(
     @SerializedName("lists") val lists: List<MediaListMembership>? = null
 ) {
     val mediaType: MediaType? get() = item?.mediaType?.let { MediaType.fromValue(it) }
-    val mediaStatus: MediaStatus? get() = MediaStatus.fromCode(status)
+    val mediaStatus: MediaStatus? get() = MediaStatus.fromApi(status)
     val title: String get() = item?.title.orEmpty()
     val image: String? get() = item?.image
     val mediaId: String get() = item?.mediaId.orEmpty()
@@ -156,7 +169,7 @@ data class MediaDetails(
 
     /** First consumption entry contains the user's tracking state. */
     val userConsumption: HistoryEntry? get() = consumptions?.firstOrNull()
-    val userStatus: MediaStatus? get() = MediaStatus.fromCode(userConsumption?.status)
+    val userStatus: MediaStatus? get() = MediaStatus.fromApi(userConsumption?.status)
     val userScore: Double? get() = userConsumption?.score
     val userProgress: Int? get() = userConsumption?.progress
     val userNotes: String? get() = userConsumption?.notes
@@ -171,7 +184,7 @@ data class HistoryEntry(
     @SerializedName("score") val score: Double? = null,
     @SerializedName("progress") val progress: Int? = null,
     @SerializedName("progressed_at") val progressedAt: String? = null,
-    @SerializedName("status") val status: Int? = null,
+    @SerializedName("status") val status: String? = null,
     @SerializedName("start_date") val startDate: String? = null,
     @SerializedName("end_date") val endDate: String? = null,
     @SerializedName("notes") val notes: String? = null
@@ -272,19 +285,20 @@ data class HealthCheck(
 data class UserStats(
     @SerializedName("start_date") val startDate: String? = null,
     @SerializedName("end_date") val endDate: String? = null,
-    @SerializedName("media_count") val mediaCount: Map<String, Int>? = null,
+    @SerializedName("media_count") val mediaCount: Map<String, Any?>? = null,
     @SerializedName("activity_data") val activityData: Map<String, Any?>? = null,
     @SerializedName("media_type_distribution") val mediaTypeDistribution: Map<String, Any?>? = null,
     @SerializedName("score_distribution") val scoreDistribution: Map<String, Any?>? = null,
-    @SerializedName("top_rated") val topRated: List<MediaItem>? = null,
+    @SerializedName("top_rated") val topRated: List<Map<String, Any?>>? = null,
     @SerializedName("status_distribution") val statusDistribution: Map<String, Any?>? = null,
     @SerializedName("status_pie_chart_data") val statusPieChartData: Map<String, Any?>? = null,
-    @SerializedName("timeline") val timeline: Map<String, List<MediaItem>>? = null
+    @SerializedName("timeline") val timeline: Map<String, Any?>? = null
 ) {
     /** Total tracked items (sum of every media type). */
-    val total: Int get() = mediaCount?.values?.sum() ?: 0
+    val total: Int get() = mediaCount?.values?.filterIsInstance<Number>()?.sumOf { it.toInt() } ?: 0
 
-    fun countFor(mediaType: MediaType): Int = mediaCount?.get(mediaType.value) ?: 0
+    fun countFor(mediaType: MediaType): Int =
+        (mediaCount?.get(mediaType.value) as? Number)?.toInt() ?: 0
 
     /**
      * Status counts derived from status_distribution. The exact shape of

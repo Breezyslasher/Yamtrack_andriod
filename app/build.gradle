@@ -20,8 +20,6 @@ android {
         
         // Default Yamtrack server configuration
         buildConfigField "String", "DEFAULT_SERVER_URL", '"https://yamtrack.fuzzygrim.com"'
-        buildConfigField "String", "DEFAULT_USERNAME", '"demo"'
-        buildConfigField "String", "DEFAULT_PASSWORD", '"demo"'
     }
 
     buildTypes {
