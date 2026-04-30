@@ -285,19 +285,20 @@ data class HealthCheck(
 data class UserStats(
     @SerializedName("start_date") val startDate: String? = null,
     @SerializedName("end_date") val endDate: String? = null,
-    @SerializedName("media_count") val mediaCount: Map<String, Int>? = null,
+    @SerializedName("media_count") val mediaCount: Map<String, Any?>? = null,
     @SerializedName("activity_data") val activityData: Map<String, Any?>? = null,
     @SerializedName("media_type_distribution") val mediaTypeDistribution: Map<String, Any?>? = null,
     @SerializedName("score_distribution") val scoreDistribution: Map<String, Any?>? = null,
-    @SerializedName("top_rated") val topRated: List<MediaItem>? = null,
+    @SerializedName("top_rated") val topRated: List<Map<String, Any?>>? = null,
     @SerializedName("status_distribution") val statusDistribution: Map<String, Any?>? = null,
     @SerializedName("status_pie_chart_data") val statusPieChartData: Map<String, Any?>? = null,
-    @SerializedName("timeline") val timeline: Map<String, List<MediaItem>>? = null
+    @SerializedName("timeline") val timeline: Map<String, Any?>? = null
 ) {
     /** Total tracked items (sum of every media type). */
-    val total: Int get() = mediaCount?.values?.sum() ?: 0
+    val total: Int get() = mediaCount?.values?.filterIsInstance<Number>()?.sumOf { it.toInt() } ?: 0
 
-    fun countFor(mediaType: MediaType): Int = mediaCount?.get(mediaType.value) ?: 0
+    fun countFor(mediaType: MediaType): Int =
+        (mediaCount?.get(mediaType.value) as? Number)?.toInt() ?: 0
 
     /**
      * Status counts derived from status_distribution. The exact shape of
