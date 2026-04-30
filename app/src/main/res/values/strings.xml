@@ -4,13 +4,10 @@
     
     <!-- Login -->
     <string name="login">Login</string>
-    <string name="username">Username</string>
-    <string name="password">Password</string>
     <string name="api_token">API Token</string>
     <string name="server_url">Server URL</string>
     <string name="server_settings">Server Settings</string>
     <string name="current_server">Server: %1$s</string>
-    <string name="demo_credentials_hint">Demo: username \"%1$s\", password \"%2$s\"</string>
     
     <!-- Navigation -->
     <string name="home">Home</string>

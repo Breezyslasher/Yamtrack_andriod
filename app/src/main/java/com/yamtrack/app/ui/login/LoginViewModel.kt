@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yamtrack.app.BuildConfig
 import com.yamtrack.app.data.model.AuthResult
-import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.repository.PreferencesManager
 import com.yamtrack.app.data.repository.YamtrackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,11 +15,11 @@ import javax.inject.Inject
 
 /**
  * LoginViewModel handles authentication against the Yamtrack REST API.
- * 
- * The API (PR #924) uses Bearer token auth. There are two entry points:
- *   1. Paste an API token directly (recommended — copy from web UI)
- *   2. Log in with username/password — the app will try to scrape the
- *      token off the profile page as a convenience for the demo server
+ *
+ * The API only supports Bearer-token / X-API-Key auth (see
+ * `src/api/authentication.py` on the `feat/add-api` branch). There is no
+ * password-grant endpoint, so the only supported flow is for the user to
+ * paste an API token copied from the Yamtrack web UI profile page.
  */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
@@ -55,11 +54,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Log in by providing an API token directly.
-     * This is the recommended flow — users can generate a token in the
-     * Yamtrack web UI profile page.
-     */
+    /** Validate (server, token) by hitting an authenticated endpoint. */
     fun loginWithToken(serverUrl: String, token: String) {
         if (serverUrl.isBlank()) {
             _loginState.value = LoginState.Error("Please enter a server URL")
@@ -76,7 +71,6 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = repository.testConnection(cleanUrl, token)) {
                 is AuthResult.Success -> {
-                    // Persist everything
                     preferencesManager.setServerUrl(cleanUrl)
                     preferencesManager.setApiToken(token)
                     preferencesManager.setLoggedIn(true)
@@ -89,58 +83,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Log in with username/password (convenience flow for demo server).
-     * This attempts session login, then scrapes the API token from /profile/.
-     * If the scrape fails, the user must paste the token manually.
-     */
-    fun loginWithPassword(serverUrl: String, username: String, password: String) {
-        if (serverUrl.isBlank()) {
-            _loginState.value = LoginState.Error("Please enter a server URL")
-            return
-        }
-        if (username.isBlank()) {
-            _loginState.value = LoginState.Error("Please enter a username")
-            return
-        }
-        if (password.isBlank()) {
-            _loginState.value = LoginState.Error("Please enter a password")
-            return
-        }
-
-        val cleanUrl = serverUrl.trimEnd('/')
-        _loginState.value = LoginState.Loading
-
-        viewModelScope.launch {
-            when (val tokenResult = repository.loginWithPassword(cleanUrl, username, password)) {
-                is Result.Success -> {
-                    // Got a token — validate it against the API
-                    val token = tokenResult.data
-                    when (val authResult = repository.testConnection(cleanUrl, token)) {
-                        is AuthResult.Success -> {
-                            preferencesManager.setServerUrl(cleanUrl)
-                            preferencesManager.setApiToken(token)
-                            preferencesManager.setLoggedIn(true)
-                            _loginState.value = LoginState.Success
-                        }
-                        is AuthResult.Error -> {
-                            _loginState.value = LoginState.Error(
-                                "Logged in but token didn't work: ${authResult.message}"
-                            )
-                        }
-                    }
-                }
-                is Result.Error -> {
-                    _loginState.value = LoginState.Error(tokenResult.message)
-                }
-                else -> { /* Loading — ignore */ }
-            }
-        }
-    }
-
-    /**
-     * Check if we have a saved session, and if so, validate it.
-     */
+    /** Validate any saved session silently on startup. */
     fun checkExistingSession() {
         viewModelScope.launch {
             val isLoggedIn = preferencesManager.isLoggedIn.first()

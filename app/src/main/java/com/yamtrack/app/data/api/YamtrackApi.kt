@@ -141,8 +141,10 @@ interface YamtrackApi {
     suspend fun getSeasons(
         @Path("media_type") mediaType: String,
         @Path("source") source: String,
-        @Path("media_id") mediaId: String
-    ): Response<List<MediaItem>>
+        @Path("media_id") mediaId: String,
+        @Query("limit") limit: Int = 20,
+        @Query("offset") offset: Int = 0
+    ): Response<PaginatedResponse<MediaItem>>
 
     @GET("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/")
     suspend fun getSeasonDetails(
@@ -166,8 +168,10 @@ interface YamtrackApi {
         @Path("media_type") mediaType: String,
         @Path("source") source: String,
         @Path("media_id") mediaId: String,
-        @Path("season_number") seasonNumber: Int
-    ): Response<List<MediaItem>>
+        @Path("season_number") seasonNumber: Int,
+        @Query("limit") limit: Int = 20,
+        @Query("offset") offset: Int = 0
+    ): Response<PaginatedResponse<MediaItem>>
 
     @GET("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/{episode_number}/")
     suspend fun getEpisodeDetails(
