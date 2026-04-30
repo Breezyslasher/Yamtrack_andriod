@@ -236,12 +236,20 @@ class MediaDetailsActivity : AppCompatActivity() {
                 chip.isChecked = chipStatus == currentStatus
             }
 
-            // Score: prefer the user's score, fall back to the public score.
-            // Always visible & clickable so the user can tap to rate even when
-            // no score has been set yet.
-            val score = item.userScore ?: item.score
-            tvScore.text = if (score != null && score > 0) {
-                String.format("%.1f / 10", score)
+            // Source/public score from the upstream provider — read-only.
+            val sourceScore = item.score
+            if (sourceScore != null && sourceScore > 0) {
+                tvSourceScore.text = getString(R.string.source_score_format, sourceScore)
+                tvSourceScore.visibility = View.VISIBLE
+            } else {
+                tvSourceScore.visibility = View.GONE
+            }
+
+            // User's score — always visible & clickable so they can tap to
+            // rate even when nothing has been set yet.
+            val userScore = item.userScore
+            tvScore.text = if (userScore != null && userScore > 0) {
+                getString(R.string.your_score_format, userScore)
             } else {
                 getString(R.string.tap_to_rate)
             }

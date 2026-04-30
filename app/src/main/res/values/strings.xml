@@ -46,6 +46,8 @@
     <string name="set_score_hint">0.0 – 10.0</string>
     <string name="clear_score">Clear</string>
     <string name="tap_to_rate">Tap to rate</string>
+    <string name="source_score_format">%1$.1f / 10 · source</string>
+    <string name="your_score_format">%1$.1f / 10 · your score</string>
 
     <!-- Actions -->
     <string name="add_to_library">Add to Library</string>

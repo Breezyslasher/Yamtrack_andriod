@@ -78,10 +78,23 @@
                             android:textStyle="bold" />
 
                         <TextView
-                            android:id="@+id/tvScore"
+                            android:id="@+id/tvSourceScore"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
+                            android:drawableStart="@drawable/ic_star"
+                            android:drawablePadding="4dp"
+                            android:padding="4dp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="14sp"
+                            android:visibility="gone"
+                            app:drawableTint="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/tvScore"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
                             android:background="?attr/selectableItemBackground"
                             android:clickable="true"
                             android:focusable="true"
