@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import android.widget.PopupMenu
 import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.chip.Chip
 import com.yamtrack.app.R
@@ -41,8 +42,44 @@ class LibraryFragment : Fragment() {
         setupRecyclerView()
         setupMediaTypeChips()
         setupStatusChips()
+        setupSortButton()
         observeViewModel()
         setupSwipeRefresh()
+    }
+
+    private fun setupSortButton() {
+        binding.btnSort.text = labelForSort(viewModel.currentSort())
+        binding.btnSort.setOnClickListener { showSortMenu() }
+    }
+
+    private fun showSortMenu() {
+        val popup = PopupMenu(requireContext(), binding.btnSort)
+        popup.menuInflater.inflate(R.menu.menu_sort, popup.menu)
+        popup.setOnMenuItemClickListener { item ->
+            val sort = sortValueFor(item.itemId) ?: return@setOnMenuItemClickListener false
+            viewModel.setSort(sort)
+            binding.btnSort.text = item.title
+            true
+        }
+        popup.show()
+    }
+
+    private fun sortValueFor(menuId: Int): String? = when (menuId) {
+        R.id.sort_added_desc -> "added_desc"
+        R.id.sort_added_asc -> "added"
+        R.id.sort_updated_desc -> "updated_desc"
+        R.id.sort_title_asc -> "title"
+        R.id.sort_title_desc -> "title_desc"
+        else -> null
+    }
+
+    private fun labelForSort(sort: String): String = when (sort) {
+        "added_desc" -> getString(R.string.sort_recently_added)
+        "added" -> getString(R.string.sort_oldest_added)
+        "updated_desc" -> getString(R.string.sort_recently_updated)
+        "title" -> getString(R.string.sort_title_az)
+        "title_desc" -> getString(R.string.sort_title_za)
+        else -> getString(R.string.sort)
     }
 
     private fun setupRecyclerView() {

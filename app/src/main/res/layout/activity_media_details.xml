@@ -78,15 +78,31 @@
                             android:textStyle="bold" />
 
                         <TextView
-                            android:id="@+id/tvScore"
+                            android:id="@+id/tvSourceScore"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
                             android:drawableStart="@drawable/ic_star"
                             android:drawablePadding="4dp"
+                            android:padding="4dp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="14sp"
+                            android:visibility="gone"
+                            app:drawableTint="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/tvScore"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:drawableStart="@drawable/ic_star"
+                            android:drawablePadding="4dp"
+                            android:padding="4dp"
                             android:textColor="@color/gold"
                             android:textSize="16sp"
-                            android:visibility="gone"
                             app:drawableTint="@color/gold" />
 
                         <com.google.android.material.chip.ChipGroup
@@ -148,6 +164,27 @@
                     app:icon="@drawable/ic_delete"
                     app:iconTint="@color/primary"
                     app:strokeColor="@color/primary" />
+
+                <!-- Recommendations -->
+                <TextView
+                    android:id="@+id/tvRecommendationsHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="32dp"
+                    android:text="@string/recommendations"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvRecommendations"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:clipToPadding="false"
+                    android:orientation="horizontal"
+                    android:visibility="gone" />
 
             </LinearLayout>
         </ScrollView>

@@ -202,6 +202,14 @@ class YamtrackRepository @Inject constructor(
         api.deleteMedia(mediaType.value, source, mediaId)
     }
 
+    suspend fun getMediaRecommendations(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String
+    ): Result<List<SearchResult>> = apiCall {
+        api.getMediaRecommendations(mediaType.value, source, mediaId)
+    }
+
     // ===================== Search =====================
 
     /**

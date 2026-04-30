@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/sort_added_desc"
+        android:title="@string/sort_recently_added" />
+    <item
+        android:id="@+id/sort_added_asc"
+        android:title="@string/sort_oldest_added" />
+    <item
+        android:id="@+id/sort_updated_desc"
+        android:title="@string/sort_recently_updated" />
+    <item
+        android:id="@+id/sort_title_asc"
+        android:title="@string/sort_title_az" />
+    <item
+        android:id="@+id/sort_title_desc"
+        android:title="@string/sort_title_za" />
+</menu>

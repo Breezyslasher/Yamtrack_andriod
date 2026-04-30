@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary Colors -->
-    <color name="primary">#E94560</color>
-    <color name="primary_dark">#C73E54</color>
-    <color name="primary_light">#FF6B7A</color>
+    <!-- Primary Colors (Yamtrack web brand: indigo-600) -->
+    <color name="primary">#4F46E5</color>
+    <color name="primary_dark">#4338CA</color>
+    <color name="primary_light">#6366F1</color>
 
-    <!-- Background Colors -->
-    <color name="background">#1A1A2E</color>
-    <color name="surface">#16213E</color>
-    <color name="surface_light">#1F3352</color>
+    <!-- Background Colors (Yamtrack web dark mode) -->
+    <color name="background">#212529</color>
+    <color name="surface">#2A2E33</color>
+    <color name="surface_light">#343A40</color>
 
     <!-- Text Colors -->
     <color name="white">#FFFFFF</color>
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#B0B0B0</color>
-    <color name="text_hint">#707070</color>
+    <color name="text_primary">#F3F4F6</color>
+    <color name="text_secondary">#9CA3AF</color>
+    <color name="text_hint">#6B7280</color>
 
     <!-- Other Colors -->
-    <color name="divider">#2D2D44</color>
-    <color name="gold">#FFD700</color>
-    <color name="success">#4CAF50</color>
-    <color name="error">#F44336</color>
-    <color name="warning">#FF9800</color>
+    <color name="divider">#2C3136</color>
+    <color name="gold">#FBBF24</color>
+    <color name="success">#10B981</color>
+    <color name="error">#F87171</color>
+    <color name="warning">#F59E0B</color>
 
-    <!-- Status Colors -->
-    <color name="status_watching">#4CAF50</color>
-    <color name="status_completed">#2196F3</color>
-    <color name="status_planning">#9C27B0</color>
-    <color name="status_paused">#FF9800</color>
-    <color name="status_dropped">#F44336</color>
+    <!-- Status Colors (matching web palette) -->
+    <color name="status_watching">#10B981</color>
+    <color name="status_completed">#4F46E5</color>
+    <color name="status_planning">#6366F1</color>
+    <color name="status_paused">#F59E0B</color>
+    <color name="status_dropped">#F87171</color>
 </resources>
