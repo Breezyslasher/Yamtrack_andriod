@@ -15,10 +15,4 @@
     <item
         android:id="@+id/sort_title_desc"
         android:title="@string/sort_title_za" />
-    <item
-        android:id="@+id/sort_score_desc"
-        android:title="@string/sort_your_score_high" />
-    <item
-        android:id="@+id/sort_score_asc"
-        android:title="@string/sort_your_score_low" />
 </menu>

@@ -64,37 +64,14 @@ class LibraryViewModel @Inject constructor(
             _isLoading.value = true
             _mediaList.value = Result.Loading
 
-            // The Yamtrack API only sorts on Item fields (title, source, …)
-            // and the manual added/updated/itemid keys — `score` is not in
-            // the allow-list. For your-score sorting we therefore skip the
-            // server `sort` param and reorder client-side.
-            val isScoreSort = currentSort == SORT_SCORE_DESC || currentSort == SORT_SCORE_ASC
-            val serverSort = if (isScoreSort) null else currentSort
-
             val result = repository.getMediaByType(
                 mediaType = currentMediaType,
                 status = currentStatus,
-                sort = serverSort,
+                sort = currentSort,
                 limit = 100
             )
-            _mediaList.value = if (isScoreSort && result is Result.Success) {
-                val descending = currentSort == SORT_SCORE_DESC
-                val sorted = result.data.sortedWith(
-                    compareBy(nullsLast()) { item ->
-                        item.score.takeIf { it != null && it > 0.0 }
-                            ?.let { if (descending) -it else it }
-                    }
-                )
-                Result.Success(sorted)
-            } else {
-                result
-            }
+            _mediaList.value = result
             _isLoading.value = false
         }
-    }
-
-    companion object {
-        const val SORT_SCORE_DESC = "score_desc"
-        const val SORT_SCORE_ASC = "score_asc"
     }
 }
