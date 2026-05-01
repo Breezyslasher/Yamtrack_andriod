@@ -1,0 +1,114 @@
+name: Build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: APK build type
+        type: choice
+        default: debug
+        options:
+          - debug
+          - release
+
+jobs:
+  # ───────────────────────────────────────────────
+  # Android — APK build
+  # ───────────────────────────────────────────────
+  build-android:
+    name: Android APK (${{ github.event.inputs.build_type || 'debug' }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Bump version
+        # Tags ship as the user-visible versionName, run number gives every CI
+        # build a unique versionCode so artifacts are easy to differentiate.
+        uses: chkfung/android-version-actions@v1.2.3
+        with:
+          gradlePath: app/build.gradle
+          versionCode: ${{ github.run_number }}
+          versionName: ${{ github.ref_type == 'tag' && github.ref_name || format('Beta {0}', github.run_number) }}
+
+      - name: Build APK
+        run: |
+          chmod +x gradlew
+          if [ "${{ github.event.inputs.build_type }}" = "release" ] || [ "${{ github.ref_type }}" = "tag" ]; then
+            ./gradlew assembleRelease --no-daemon --stacktrace
+          else
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          fi
+
+      - name: Locate APKs
+        id: locate
+        run: |
+          mapfile -t apks < <(find app/build/outputs/apk -type f -name '*.apk' | sort)
+          if [ ${#apks[@]} -eq 0 ]; then
+            echo "No APK produced" >&2
+            exit 1
+          fi
+          {
+            echo 'paths<<EOF'
+            printf '%s\n' "${apks[@]}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Yamtrack-android-${{ github.run_number }}
+          path: ${{ steps.locate.outputs.paths }}
+          if-no-files-found: error
+
+  # ───────────────────────────────────────────────
+  # Tag-driven release: collects APK artifacts and
+  # creates a draft GitHub Release.
+  # ───────────────────────────────────────────────
+  upload-release:
+    name: Release
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download APK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Yamtrack ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: true
+          files: |
+            dist/Yamtrack-android-*/**/*.apk

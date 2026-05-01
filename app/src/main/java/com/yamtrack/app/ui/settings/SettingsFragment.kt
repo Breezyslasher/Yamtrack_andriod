@@ -12,6 +12,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.yamtrack.app.BuildConfig
 import com.yamtrack.app.R
+import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.model.UserStats
+import com.yamtrack.app.databinding.DialogStatsBinding
 import com.yamtrack.app.databinding.FragmentSettingsBinding
 import com.yamtrack.app.ui.login.LoginActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -55,18 +58,8 @@ class SettingsFragment : Fragment() {
             viewModel.setNotificationsEnabled(isChecked)
         }
 
-        // Account
-        binding.layoutExport.setOnClickListener {
-            Toast.makeText(requireContext(), 
-                "Use your server's web UI to export data.", 
-                Toast.LENGTH_LONG).show()
-        }
-
-        binding.layoutImport.setOnClickListener {
-            Toast.makeText(requireContext(), 
-                "Use your server's web UI to import data.", 
-                Toast.LENGTH_LONG).show()
-        }
+        // Stats
+        binding.layoutStats.setOnClickListener { showStatsDialog() }
 
         // Logout
         binding.btnLogout.setOnClickListener { showLogoutConfirmation() }
@@ -127,6 +120,49 @@ class SettingsFragment : Fragment() {
                 viewModel.logout()
             }
             .show()
+    }
+
+    private fun showStatsDialog() {
+        val dialogBinding = DialogStatsBinding.inflate(layoutInflater)
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle(R.string.stats_title)
+            .setView(dialogBinding.root)
+            .setPositiveButton(R.string.close, null)
+            .create()
+        dialog.show()
+
+        val observer = androidx.lifecycle.Observer<Result<UserStats>> { result ->
+            when (result) {
+                is Result.Loading -> {
+                    dialogBinding.progressBar.visibility = View.VISIBLE
+                    dialogBinding.tvLoading.visibility = View.VISIBLE
+                    dialogBinding.groupContent.visibility = View.GONE
+                    dialogBinding.tvError.visibility = View.GONE
+                }
+                is Result.Success -> {
+                    dialogBinding.progressBar.visibility = View.GONE
+                    dialogBinding.tvLoading.visibility = View.GONE
+                    dialogBinding.tvError.visibility = View.GONE
+                    dialogBinding.groupContent.visibility = View.VISIBLE
+                    val stats = result.data
+                    dialogBinding.tvTotal.text = stats.total.toString()
+                    dialogBinding.tvCompleted.text = stats.completed.toString()
+                    dialogBinding.tvInProgress.text = stats.inProgress.toString()
+                    dialogBinding.tvPlanning.text = stats.planning.toString()
+                }
+                is Result.Error -> {
+                    dialogBinding.progressBar.visibility = View.GONE
+                    dialogBinding.tvLoading.visibility = View.GONE
+                    dialogBinding.groupContent.visibility = View.GONE
+                    dialogBinding.tvError.visibility = View.VISIBLE
+                    dialogBinding.tvError.text = result.message
+                }
+            }
+        }
+        viewModel.stats.observe(viewLifecycleOwner, observer)
+        dialog.setOnDismissListener { viewModel.stats.removeObserver(observer) }
+
+        viewModel.loadStats()
     }
 
     private fun showLogoutConfirmation() {

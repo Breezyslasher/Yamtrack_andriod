@@ -14,7 +14,6 @@ import com.yamtrack.app.R
 import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
-import com.yamtrack.app.data.model.UserStats
 import com.yamtrack.app.databinding.FragmentHomeBinding
 import com.yamtrack.app.databinding.SectionMediaGroupBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
@@ -46,14 +45,6 @@ class HomeFragment : Fragment() {
     }
 
     private fun observeViewModel() {
-        viewModel.stats.observe(viewLifecycleOwner) { result ->
-            when (result) {
-                is Result.Success -> updateStats(result.data)
-                is Result.Error -> { /* Leave zeros */ }
-                is Result.Loading -> { /* No-op */ }
-            }
-        }
-
         viewModel.recentByType.observe(viewLifecycleOwner) { groups ->
             renderGroups(binding.llRecentSections, groups)
             binding.tvEmptyRecent.visibility =
@@ -115,15 +106,6 @@ class HomeFragment : Fragment() {
             putExtra(MediaDetailsActivity.EXTRA_MEDIA_ID, item.mediaId)
         }
         startActivity(intent)
-    }
-
-    private fun updateStats(stats: UserStats) {
-        binding.apply {
-            tvStatTotal.text = stats.total.toString()
-            tvStatCompleted.text = stats.completed.toString()
-            tvStatWatching.text = stats.inProgress.toString()
-            tvStatPlanning.text = stats.planning.toString()
-        }
     }
 
     private fun setupSwipeRefresh() {

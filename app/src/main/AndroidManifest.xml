@@ -17,14 +17,19 @@
         tools:targetApi="31">
 
         <activity
-            android:name=".ui.login.LoginActivity"
+            android:name=".ui.splash.SplashActivity"
             android:exported="true"
-            android:theme="@style/Theme.Yamtrack.NoActionBar">
+            android:theme="@style/Theme.Yamtrack.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.login.LoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Yamtrack.NoActionBar" />
 
         <activity
             android:name=".MainActivity"
@@ -36,6 +41,23 @@
             android:exported="false"
             android:theme="@style/Theme.Yamtrack.NoActionBar"
             android:parentActivityName=".MainActivity" />
+
+        <!-- Calendar widget -->
+        <receiver
+            android:name=".widget.CalendarWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/calendar_widget_info" />
+        </receiver>
+
+        <service
+            android:name=".widget.CalendarWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
 
     </application>
 
