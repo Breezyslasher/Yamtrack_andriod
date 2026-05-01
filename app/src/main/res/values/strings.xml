@@ -24,6 +24,11 @@
     <string name="books">Books</string>
     <string name="comics">Comics</string>
     
+    <!-- Home -->
+    <string name="home_section_recent">Recently Updated</string>
+    <string name="home_section_planning">Planning</string>
+    <string name="home_no_recent">No media tracked yet</string>
+
     <!-- Sort -->
     <string name="sort">Sort</string>
     <string name="sort_recently_added">Recently Added</string>

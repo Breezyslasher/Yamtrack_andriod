@@ -5,13 +5,18 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.yamtrack.app.R
+import com.yamtrack.app.data.model.MediaItem
+import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.model.UserStats
 import com.yamtrack.app.databinding.FragmentHomeBinding
+import com.yamtrack.app.databinding.SectionMediaGroupBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -22,7 +27,6 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: HomeViewModel by viewModels()
-    private lateinit var recentMediaAdapter: MediaAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -35,28 +39,10 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupRecyclerView()
         observeViewModel()
         setupSwipeRefresh()
 
         viewModel.loadData()
-    }
-
-    private fun setupRecyclerView() {
-        recentMediaAdapter = MediaAdapter { mediaItem ->
-            val type = mediaItem.mediaType ?: return@MediaAdapter
-            val intent = Intent(requireContext(), MediaDetailsActivity::class.java).apply {
-                putExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE, type.value)
-                putExtra(MediaDetailsActivity.EXTRA_SOURCE, mediaItem.source)
-                putExtra(MediaDetailsActivity.EXTRA_MEDIA_ID, mediaItem.mediaId)
-            }
-            startActivity(intent)
-        }
-
-        binding.rvRecentMedia.apply {
-            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-            adapter = recentMediaAdapter
-        }
     }
 
     private fun observeViewModel() {
@@ -68,24 +54,61 @@ class HomeFragment : Fragment() {
             }
         }
 
-        viewModel.recentMedia.observe(viewLifecycleOwner) { result ->
-            when (result) {
-                is Result.Success -> {
-                    recentMediaAdapter.submitList(result.data)
-                    binding.tvEmptyRecent.visibility = 
-                        if (result.data.isEmpty()) View.VISIBLE else View.GONE
-                }
-                is Result.Error -> {
-                    binding.tvEmptyRecent.visibility = View.VISIBLE
-                    binding.tvEmptyRecent.text = result.message
-                }
-                is Result.Loading -> { /* No-op */ }
-            }
+        viewModel.recentByType.observe(viewLifecycleOwner) { groups ->
+            renderGroups(binding.llRecentSections, groups)
+            binding.tvEmptyRecent.visibility =
+                if (groups.isEmpty()) View.VISIBLE else View.GONE
+        }
+
+        viewModel.planningByType.observe(viewLifecycleOwner) { groups ->
+            renderGroups(binding.llPlanningSections, groups)
+            binding.tvPlanningHeader.visibility =
+                if (groups.isEmpty()) View.GONE else View.VISIBLE
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.swipeRefresh.isRefreshing = isLoading
         }
+    }
+
+    /**
+     * Build (or rebuild) one horizontal poster row per media-type group.
+     * Recreated wholesale on every emission for simplicity — the lists are
+     * small and this is invoked only after data loads or swipe-refresh.
+     */
+    private fun renderGroups(
+        container: LinearLayout,
+        groups: Map<MediaType, List<MediaItem>>
+    ) {
+        container.removeAllViews()
+        val inflater = LayoutInflater.from(container.context)
+        groups.forEach { (type, items) ->
+            val sectionBinding = SectionMediaGroupBinding.inflate(inflater, container, false)
+            sectionBinding.tvSectionTitle.text = type.displayName
+
+            val adapter = MediaAdapter { item -> openDetails(item) }
+            sectionBinding.rvSection.apply {
+                layoutManager = LinearLayoutManager(
+                    context, LinearLayoutManager.HORIZONTAL, false
+                )
+                this.adapter = adapter
+                isNestedScrollingEnabled = false
+                setHasFixedSize(true)
+            }
+            adapter.submitList(items)
+
+            container.addView(sectionBinding.root)
+        }
+    }
+
+    private fun openDetails(item: MediaItem) {
+        val type = item.mediaType ?: return
+        val intent = Intent(requireContext(), MediaDetailsActivity::class.java).apply {
+            putExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE, type.value)
+            putExtra(MediaDetailsActivity.EXTRA_SOURCE, item.source)
+            putExtra(MediaDetailsActivity.EXTRA_MEDIA_ID, item.mediaId)
+        }
+        startActivity(intent)
     }
 
     private fun updateStats(stats: UserStats) {
@@ -98,9 +121,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupSwipeRefresh() {
-        binding.swipeRefresh.setOnRefreshListener {
-            viewModel.loadData()
-        }
+        binding.swipeRefresh.setOnRefreshListener { viewModel.loadData() }
         binding.swipeRefresh.setColorSchemeResources(R.color.primary)
     }
 
