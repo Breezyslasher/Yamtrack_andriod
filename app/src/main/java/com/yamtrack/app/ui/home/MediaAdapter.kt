@@ -13,13 +13,27 @@ import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.databinding.ItemMediaCardBinding
 
 class MediaAdapter(
+    /**
+     * Optional fixed item width in pixels. Used in horizontal rails on the
+     * home page where the card layout's `match_parent` would otherwise
+     * stretch to the RecyclerView's full width. Library grid passes null
+     * so the card fills its grid span.
+     */
+    private val fixedItemWidthPx: Int? = null,
     private val onItemClick: (MediaItem) -> Unit
 ) : ListAdapter<MediaItem, MediaAdapter.MediaViewHolder>(MediaDiffCallback()) {
+
+    constructor(onItemClick: (MediaItem) -> Unit) : this(null, onItemClick)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MediaViewHolder {
         val binding = ItemMediaCardBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
         )
+        if (fixedItemWidthPx != null) {
+            binding.root.layoutParams = binding.root.layoutParams.apply {
+                width = fixedItemWidthPx
+            }
+        }
         return MediaViewHolder(binding)
     }
 

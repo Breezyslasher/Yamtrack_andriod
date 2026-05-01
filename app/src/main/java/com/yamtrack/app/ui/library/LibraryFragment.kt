@@ -107,21 +107,15 @@ class LibraryFragment : Fragment() {
         MediaType.parentTypes.forEach { type ->
             val chip = Chip(requireContext()).apply {
                 text = type.displayName
-                tag = type
                 isCheckable = true
+                isChecked = type == MediaType.MOVIE
                 setOnCheckedChangeListener { _, isChecked ->
-                    if (isChecked) viewModel.setMediaType(type)
+                    if (isChecked) {
+                        viewModel.setMediaType(type)
+                    }
                 }
             }
             binding.chipGroupMediaType.addView(chip)
-        }
-    }
-
-    private fun syncMediaTypeChips(type: MediaType) {
-        for (i in 0 until binding.chipGroupMediaType.childCount) {
-            val chip = binding.chipGroupMediaType.getChildAt(i) as? Chip ?: continue
-            val matches = chip.tag == type
-            if (chip.isChecked != matches) chip.isChecked = matches
         }
     }
 
@@ -155,10 +149,6 @@ class LibraryFragment : Fragment() {
     }
 
     private fun observeViewModel() {
-        viewModel.mediaType.observe(viewLifecycleOwner) { type ->
-            syncMediaTypeChips(type)
-        }
-
         viewModel.mediaList.observe(viewLifecycleOwner) { result ->
             when (result) {
                 is Result.Success -> {
