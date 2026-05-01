@@ -29,6 +29,23 @@
     <string name="home_section_planning">Planning</string>
     <string name="home_no_recent">No media tracked yet</string>
 
+    <!-- Calendar -->
+    <string name="calendar">Calendar</string>
+    <string name="calendar_empty">Nothing scheduled this month.</string>
+    <string name="calendar_widget_title">Yamtrack — Upcoming</string>
+    <string name="calendar_widget_loading">Loading…</string>
+    <string name="calendar_widget_empty">No upcoming releases</string>
+
+    <!-- Stats -->
+    <string name="stats_title">Stats</string>
+    <string name="stats_subtitle">Tracking totals across all media</string>
+    <string name="stats_total">Total</string>
+    <string name="stats_completed">Completed</string>
+    <string name="stats_in_progress">In progress</string>
+    <string name="stats_planning">Planning</string>
+    <string name="stats_loading">Loading stats…</string>
+    <string name="close">Close</string>
+
     <!-- Sort -->
     <string name="sort">Sort</string>
     <string name="sort_recently_added">Recently Added</string>

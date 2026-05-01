@@ -8,7 +8,6 @@ import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
-import com.yamtrack.app.data.model.UserStats
 import com.yamtrack.app.data.repository.YamtrackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -19,9 +18,6 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val repository: YamtrackRepository
 ) : ViewModel() {
-
-    private val _stats = MutableLiveData<Result<UserStats>>()
-    val stats: LiveData<Result<UserStats>> = _stats
 
     /**
      * Recently-updated items grouped by media type. Insertion order is the
@@ -41,7 +37,6 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
 
-            val statsDeferred = async { repository.getStatistics() }
             val recentDeferred = async {
                 repository.getAllMedia(sort = "updated_desc", limit = 200)
             }
@@ -53,7 +48,6 @@ class HomeViewModel @Inject constructor(
                 )
             }
 
-            _stats.value = statsDeferred.await()
             _recentByType.value = groupByType(recentDeferred.await())
             _planningByType.value = groupByType(planningDeferred.await())
 
@@ -65,8 +59,6 @@ class HomeViewModel @Inject constructor(
     private fun groupByType(result: Result<List<MediaItem>>): Map<MediaType, List<MediaItem>> {
         val items = (result as? Result.Success)?.data ?: return emptyMap()
         val groups = LinkedHashMap<MediaType, MutableList<MediaItem>>()
-        // Seed in canonical order so empty types just don't show, but the
-        // ones that do appear keep a predictable order.
         MediaType.parentTypes.forEach { groups[it] = mutableListOf() }
         items.forEach { item ->
             val type = item.mediaType ?: return@forEach

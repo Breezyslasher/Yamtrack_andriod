@@ -26,6 +26,11 @@
         <item name="windowNoTitle">true</item>
     </style>
 
+    <style name="Theme.Yamtrack.Splash" parent="Theme.Yamtrack.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
     <!-- Chip Style -->
     <style name="Widget.Yamtrack.Chip" parent="Widget.MaterialComponents.Chip.Choice">
         <item name="chipBackgroundColor">@color/chip_background_color</item>

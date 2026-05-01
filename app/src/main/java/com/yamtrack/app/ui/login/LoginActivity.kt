@@ -34,8 +34,9 @@ class LoginActivity : AppCompatActivity() {
 
         setupUI()
         observeViewModel()
-
-        viewModel.checkExistingSession()
+        // SplashActivity handles the "already logged in" path before we get
+        // here, so we don't trigger another silent session check on the
+        // login screen.
     }
 
     private fun setupUI() {

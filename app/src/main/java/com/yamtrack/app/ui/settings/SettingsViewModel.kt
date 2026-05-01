@@ -2,6 +2,7 @@ package com.yamtrack.app.ui.settings
 
 import androidx.lifecycle.*
 import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.model.UserStats
 import com.yamtrack.app.data.repository.PreferencesManager
 import com.yamtrack.app.data.repository.YamtrackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -90,6 +91,21 @@ class SettingsViewModel @Inject constructor(
             repository.setToken(null)
             preferencesManager.clearSession()
             _logoutComplete.value = true
+        }
+    }
+
+    /**
+     * One-shot stats fetch for the dialog. The home screen no longer renders
+     * stats, so this VM owns the lookup. Returns Loading first, then either
+     * Success(stats) or Error(message).
+     */
+    private val _stats = MutableLiveData<Result<UserStats>>()
+    val stats: LiveData<Result<UserStats>> = _stats
+
+    fun loadStats() {
+        viewModelScope.launch {
+            _stats.value = Result.Loading
+            _stats.value = repository.getStatistics()
         }
     }
 }

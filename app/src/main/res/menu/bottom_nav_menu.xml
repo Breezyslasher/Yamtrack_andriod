@@ -12,6 +12,11 @@
         android:title="Library" />
 
     <item
+        android:id="@+id/calendarFragment"
+        android:icon="@drawable/ic_calendar"
+        android:title="Calendar" />
+
+    <item
         android:id="@+id/searchFragment"
         android:icon="@drawable/ic_search"
         android:title="Search" />

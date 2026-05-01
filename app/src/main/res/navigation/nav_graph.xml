@@ -15,6 +15,11 @@
         android:label="Library" />
 
     <fragment
+        android:id="@+id/calendarFragment"
+        android:name="com.yamtrack.app.ui.calendar.CalendarFragment"
+        android:label="Calendar" />
+
+    <fragment
         android:id="@+id/searchFragment"
         android:name="com.yamtrack.app.ui.search.SearchFragment"
         android:label="Search" />
