@@ -82,11 +82,16 @@ class HomeFragment : Fragment() {
     ) {
         container.removeAllViews()
         val inflater = LayoutInflater.from(container.context)
+        // Item layout is match_parent for the library grid; pin a fixed
+        // pixel width here so cards don't stretch in horizontal rails.
+        val cardWidthPx = (resources.displayMetrics.density * 128).toInt()
         groups.forEach { (type, items) ->
             val sectionBinding = SectionMediaGroupBinding.inflate(inflater, container, false)
             sectionBinding.tvSectionTitle.text = type.displayName
 
-            val adapter = MediaAdapter { item -> openDetails(item) }
+            val adapter = MediaAdapter(fixedItemWidthPx = cardWidthPx) { item ->
+                openDetails(item)
+            }
             sectionBinding.rvSection.apply {
                 layoutManager = LinearLayoutManager(
                     context, LinearLayoutManager.HORIZONTAL, false
