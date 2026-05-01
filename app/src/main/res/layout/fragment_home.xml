@@ -168,23 +168,21 @@
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <!-- Recent Media Section -->
+            <!-- Recently Updated, grouped by type -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Recent Media"
+                android:text="@string/home_section_recent"
                 android:textColor="@color/white"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvRecentMedia"
+            <LinearLayout
+                android:id="@+id/llRecentSections"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:clipToPadding="false"
-                android:orientation="horizontal" />
+                android:orientation="vertical" />
 
             <TextView
                 android:id="@+id/tvEmptyRecent"
@@ -192,9 +190,27 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:gravity="center"
-                android:text="No media tracked yet"
+                android:text="@string/home_no_recent"
                 android:textColor="@color/text_secondary"
                 android:visibility="gone" />
+
+            <!-- Planning, grouped by type -->
+            <TextView
+                android:id="@+id/tvPlanningHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/home_section_planning"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/llPlanningSections"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
