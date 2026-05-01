@@ -15,11 +15,11 @@
 
         <!-- Logo -->
         <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
             android:layout_marginTop="32dp"
-            android:src="@drawable/ic_movie"
-            app:tint="@color/primary" />
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/ic_yamtrack_logo" />
 
         <TextView
             android:layout_width="wrap_content"
