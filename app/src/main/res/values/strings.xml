@@ -31,6 +31,8 @@
     <string name="sort_recently_updated">Recently Updated</string>
     <string name="sort_title_az">Title (A–Z)</string>
     <string name="sort_title_za">Title (Z–A)</string>
+    <string name="sort_your_score_high">Your Score (High → Low)</string>
+    <string name="sort_your_score_low">Your Score (Low → High)</string>
 
     <!-- Status -->
     <string name="in_progress">In Progress</string>

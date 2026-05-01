@@ -70,6 +70,8 @@ class LibraryFragment : Fragment() {
         R.id.sort_updated_desc -> "updated_desc"
         R.id.sort_title_asc -> "title"
         R.id.sort_title_desc -> "title_desc"
+        R.id.sort_score_desc -> LibraryViewModel.SORT_SCORE_DESC
+        R.id.sort_score_asc -> LibraryViewModel.SORT_SCORE_ASC
         else -> null
     }
 
@@ -79,6 +81,8 @@ class LibraryFragment : Fragment() {
         "updated_desc" -> getString(R.string.sort_recently_updated)
         "title" -> getString(R.string.sort_title_az)
         "title_desc" -> getString(R.string.sort_title_za)
+        LibraryViewModel.SORT_SCORE_DESC -> getString(R.string.sort_your_score_high)
+        LibraryViewModel.SORT_SCORE_ASC -> getString(R.string.sort_your_score_low)
         else -> getString(R.string.sort)
     }
 
