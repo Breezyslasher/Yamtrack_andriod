@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,8 +13,8 @@
         android:orientation="horizontal">
 
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
             android:src="@drawable/ic_calendar"
             android:contentDescription="@string/calendar_widget_title"
             android:tint="@color/primary" />
@@ -23,19 +23,19 @@
             android:id="@+id/widgetTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="6dp"
             android:layout_weight="1"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="@string/calendar_widget_title"
             android:textColor="@color/white"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
         <ImageButton
             android:id="@+id/widgetRefresh"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/calendar"
             android:src="@drawable/ic_chevron_right"
@@ -46,10 +46,10 @@
         android:id="@+id/widgetList"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:layout_weight="1"
         android:divider="@android:color/transparent"
-        android:dividerHeight="6dp" />
+        android:dividerHeight="4dp" />
 
     <TextView
         android:id="@+id/widgetEmpty"

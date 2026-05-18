@@ -10,6 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.yamtrack.app.R
 import com.yamtrack.app.data.model.CalendarEvent
+import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.databinding.FragmentCalendarBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
@@ -143,8 +144,15 @@ class CalendarFragment : Fragment() {
     private fun openEvent(event: CalendarEvent) {
         val type = event.mediaType ?: return
         val item = event.item ?: return
+        // Episodes/seasons aren't valid top-level detail resources — the API
+        // only serves parent media types. Calendar episode rows carry the
+        // show's media_id, so open it as the TV show instead.
+        val openType = when (type) {
+            MediaType.SEASON, MediaType.EPISODE -> MediaType.TV
+            else -> type
+        }
         val intent = Intent(requireContext(), MediaDetailsActivity::class.java).apply {
-            putExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE, type.value)
+            putExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE, openType.value)
             putExtra(MediaDetailsActivity.EXTRA_SOURCE, item.source)
             putExtra(MediaDetailsActivity.EXTRA_MEDIA_ID, item.mediaId)
         }

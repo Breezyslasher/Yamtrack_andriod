@@ -16,7 +16,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.util.Calendar
 import java.util.Locale
 
 /**
@@ -69,12 +69,25 @@ private class CalendarRemoteViewsFactory(
             repo.setServerUrl(server)
             repo.setToken(token)
 
-            val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-            // Fetch a wider window than the default month so the widget can
-            // show upcoming items for users with sparse releases.
-            val result = repo.getCalendar(startDate = today, limit = 50)
+            // Match the app's calendar window: today through +3 months,
+            // upcoming only. The server range can still include earlier
+            // same-month entries, so filter to today-or-later as well.
+            val iso = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val cal = Calendar.getInstance()
+            val todayStr = iso.format(cal.time)
+            val end = (cal.clone() as Calendar).apply { add(Calendar.MONTH, 3) }
+            val endStr = iso.format(end.time)
+
+            val result = repo.getCalendar(
+                startDate = todayStr,
+                endDate = endStr,
+                limit = 200
+            )
             if (result is Result.Success) {
-                events += result.data.sortedBy { it.date.orEmpty() }.take(20)
+                events += result.data
+                    .filter { (it.date?.take(10) ?: "") >= todayStr }
+                    .sortedBy { it.date.orEmpty() }
+                    .take(30)
             }
         }
     }

@@ -154,14 +154,13 @@ class MediaDetailsActivity : AppCompatActivity() {
             .setPositiveButton(R.string.save) { _, _ ->
                 val raw = input.text.toString().trim()
                 val parsed = raw.toDoubleOrNull()
+                // Server only accepts 0–10; it has no "unset" — so there is
+                // no Clear action, an empty/out-of-range entry is rejected.
                 if (parsed == null || parsed < 0.0 || parsed > 10.0) {
                     Toast.makeText(this, R.string.set_score_hint, Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
                 viewModel.updateScore(parsed)
-            }
-            .setNeutralButton(R.string.clear_score) { _, _ ->
-                viewModel.updateScore(null)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
