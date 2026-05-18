@@ -8,6 +8,7 @@ import android.content.Intent
 import android.widget.RemoteViews
 import com.yamtrack.app.MainActivity
 import com.yamtrack.app.R
+import com.yamtrack.app.ui.splash.SplashActivity
 
 /**
  * Home-screen widget that lists upcoming calendar events from the user's
@@ -43,11 +44,13 @@ class CalendarWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widgetTitle, openPending)
             views.setOnClickPendingIntent(R.id.widgetRefresh, openPending)
 
-            // Per-row click template — RemoteViewsFactory fills in the rest.
-            val rowIntent = Intent(context, MainActivity::class.java)
+            // Per-row click template — the factory fills in the media extras
+            // per row. Routed through SplashActivity so the auth/token is
+            // primed before MediaDetailsActivity loads.
+            val rowIntent = Intent(context, SplashActivity::class.java)
             val rowPending = PendingIntent.getActivity(
-                context, 0, rowIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                context, 1, rowIntent,
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
             views.setPendingIntentTemplate(R.id.widgetList, rowPending)
 
