@@ -11,8 +11,6 @@ import coil.transform.RoundedCornersTransformation
 import com.yamtrack.app.R
 import com.yamtrack.app.data.model.CalendarEvent
 import com.yamtrack.app.databinding.ItemCalendarEventBinding
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 /** A row is either a date header ("Today", "May 20") or a single event. */
 sealed class CalendarRow {
@@ -23,10 +21,6 @@ sealed class CalendarRow {
 class CalendarAdapter(
     private val onClick: (CalendarEvent) -> Unit
 ) : ListAdapter<CalendarRow, RecyclerView.ViewHolder>(Diff()) {
-
-    private val isoParser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-    private val dayFmt = SimpleDateFormat("d", Locale.getDefault())
-    private val monthFmt = SimpleDateFormat("MMM", Locale.getDefault())
 
     override fun getItemViewType(position: Int): Int = when (getItem(position)) {
         is CalendarRow.Header -> TYPE_HEADER
@@ -70,18 +64,9 @@ class CalendarAdapter(
         }
 
         fun bind(event: CalendarEvent) {
+            // The date is shown once per group via CalendarRow.Header, so the
+            // individual rows no longer carry a day/month chip.
             binding.tvTitle.text = event.title.ifBlank { "—" }
-
-            val dateStr = event.date?.let { it.substring(0, minOf(10, it.length)) }
-            val parsed = dateStr?.let { runCatching { isoParser.parse(it) }.getOrNull() }
-            if (parsed != null) {
-                binding.tvDay.text = dayFmt.format(parsed)
-                binding.tvMonth.text = monthFmt.format(parsed)
-            } else {
-                binding.tvDay.text = "?"
-                binding.tvMonth.text = ""
-            }
-
             binding.tvDetail.text = buildDetailLine(event)
 
             val image = event.image
