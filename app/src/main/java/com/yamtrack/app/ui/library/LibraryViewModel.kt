@@ -84,13 +84,39 @@ class LibraryViewModel @Inject constructor(
             _isLoading.value = true
             _mediaList.value = Result.Loading
 
-            val result = repository.getMediaByType(
-                mediaType = currentMediaType,
-                status = currentStatus,
-                sort = currentSort,
-                limit = 100
-            )
-            _mediaList.value = result
+            // The API caps a single page at MAX_RESULT_LIMIT (200), so a
+            // flat limit silently truncates large libraries. Page through
+            // until a short page signals the end and show the full set.
+            val pageSize = 200
+            val all = mutableListOf<MediaItem>()
+            var offset = 0
+            var error: Result.Error? = null
+            while (true) {
+                val page = repository.getMediaByType(
+                    mediaType = currentMediaType,
+                    status = currentStatus,
+                    sort = currentSort,
+                    limit = pageSize,
+                    offset = offset
+                )
+                when (page) {
+                    is Result.Success -> {
+                        all += page.data
+                        if (page.data.size < pageSize) break
+                        offset += pageSize
+                    }
+                    is Result.Error -> {
+                        error = page
+                        break
+                    }
+                    is Result.Loading -> break
+                }
+            }
+
+            _mediaList.value = when {
+                error != null && all.isEmpty() -> error
+                else -> Result.Success(all)
+            }
             _isLoading.value = false
         }
     }
