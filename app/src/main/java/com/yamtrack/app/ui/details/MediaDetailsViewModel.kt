@@ -32,6 +32,9 @@ class MediaDetailsViewModel @Inject constructor(
     private val _tracked = MutableLiveData(false)
     val tracked: LiveData<Boolean> = _tracked
 
+    private val _seasons = MutableLiveData<List<MediaItem>>(emptyList())
+    val seasons: LiveData<List<MediaItem>> = _seasons
+
     private var currentMediaType: MediaType = MediaType.MOVIE
     private var currentSource: String = "tmdb"
     private var currentMediaId: String = ""
@@ -52,6 +55,53 @@ class MediaDetailsViewModel @Inject constructor(
             }
         }
         loadRecommendations()
+        if (mediaType == MediaType.TV) loadSeasons()
+    }
+
+    private fun loadSeasons() {
+        viewModelScope.launch {
+            _seasons.value = when (val r = repository.getSeasons(currentSource, currentMediaId)) {
+                is Result.Success -> r.data.sortedBy { it.item?.seasonNumber ?: 0 }
+                else -> emptyList()
+            }
+        }
+    }
+
+    /** Episodes for a season, fetched lazily when the season is opened. */
+    suspend fun episodesOf(seasonNumber: Int): List<MediaItem> =
+        when (val r = repository.getEpisodes(currentSource, currentMediaId, seasonNumber)) {
+            is Result.Success -> r.data
+            else -> emptyList()
+        }
+
+    /** Rich metadata for a single episode (title, date, length, overview). */
+    suspend fun episodeDetail(seasonNumber: Int, episodeNumber: Int): MediaDetails? =
+        when (val r = repository.getEpisodeDetails(
+            currentSource, currentMediaId, seasonNumber, episodeNumber
+        )) {
+            is Result.Success -> r.data
+            else -> null
+        }
+
+    fun markSeasonCompleted(seasonNumber: Int) {
+        viewModelScope.launch {
+            val result = repository.updateSeason(
+                currentSource, currentMediaId, seasonNumber,
+                UpdateMediaRequest(status = MediaStatus.COMPLETED.code)
+            )
+            _updateResult.value = applyMutationResult(result)
+        }
+    }
+
+    fun setEpisodeWatched(seasonNumber: Int, episodeNumber: Int, watched: Boolean) {
+        viewModelScope.launch {
+            val status = if (watched) MediaStatus.COMPLETED else MediaStatus.PLANNING
+            val result = repository.updateEpisode(
+                currentSource, currentMediaId, seasonNumber, episodeNumber,
+                UpdateMediaRequest(status = status.code)
+            )
+            _updateResult.value = applyMutationResult(result)
+        }
     }
 
     /** Add with default Planning status (used by the explicit button). */

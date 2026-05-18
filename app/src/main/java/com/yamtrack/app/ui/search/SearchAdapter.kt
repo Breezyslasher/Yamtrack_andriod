@@ -50,8 +50,14 @@ class SearchAdapter(
 
         fun bind(item: SearchResult) {
             binding.tvTitle.text = item.displayTitle
-            binding.tvYear.text = item.year.orEmpty()
-            binding.tvType.text = item.type?.displayName ?: item.mediaType.orEmpty()
+
+            // Release date now lives next to the media-type badge, so the
+            // standalone year line is redundant.
+            binding.tvYear.visibility = View.GONE
+
+            val typeLabel = item.type?.displayName ?: item.mediaType.orEmpty()
+            val year = item.year?.takeIf { it.isNotBlank() }
+            binding.tvType.text = if (year != null) "$typeLabel · $year" else typeLabel
 
             if (!item.image.isNullOrBlank()) {
                 binding.ivPoster.load(item.image) {

@@ -210,6 +210,59 @@ class YamtrackRepository @Inject constructor(
         api.getMediaRecommendations(mediaType.value, source, mediaId)
     }
 
+    // ===================== Seasons & episodes =====================
+
+    suspend fun getSeasons(
+        source: String,
+        mediaId: String
+    ): Result<List<MediaItem>> = apiCall {
+        api.getSeasons(MediaType.TV.value, source, mediaId, limit = 100)
+    }.map { it.results }
+
+    suspend fun getSeasonDetails(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int
+    ): Result<MediaDetails> = apiCall {
+        api.getSeasonDetails(MediaType.TV.value, source, mediaId, seasonNumber)
+    }
+
+    suspend fun updateSeason(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int,
+        update: UpdateMediaRequest
+    ): Result<MediaDetails> = apiCall {
+        api.updateSeason(MediaType.TV.value, source, mediaId, seasonNumber, update)
+    }
+
+    suspend fun getEpisodes(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int
+    ): Result<List<MediaItem>> = apiCall {
+        api.getEpisodes(MediaType.TV.value, source, mediaId, seasonNumber, limit = 200)
+    }.map { it.results }
+
+    suspend fun getEpisodeDetails(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int,
+        episodeNumber: Int
+    ): Result<MediaDetails> = apiCall {
+        api.getEpisodeDetails(MediaType.TV.value, source, mediaId, seasonNumber, episodeNumber)
+    }
+
+    suspend fun updateEpisode(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int,
+        episodeNumber: Int,
+        update: UpdateMediaRequest
+    ): Result<MediaDetails> = apiCall {
+        api.updateEpisode(MediaType.TV.value, source, mediaId, seasonNumber, episodeNumber, update)
+    }
+
     // ===================== Search =====================
 
     /**

@@ -68,6 +68,12 @@
     
     <!-- Detail screen -->
     <string name="recommendations">Recommendations</string>
+    <string name="seasons">Seasons</string>
+    <string name="episodes">Episodes</string>
+    <string name="season_number">Season %1$d</string>
+    <string name="mark_season_watched">Mark season watched</string>
+    <string name="episode_last_watched">Last watched %1$s</string>
+    <string name="episode_not_watched">Not watched yet</string>
     <string name="set_score_title">Set your score</string>
     <string name="set_score_hint">0.0 – 10.0</string>
     <string name="clear_score">Clear</string>
