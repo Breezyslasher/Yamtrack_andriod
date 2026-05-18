@@ -5,12 +5,10 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.widget.EditText
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import coil.transform.RoundedCornersTransformation
@@ -18,14 +16,12 @@ import com.google.android.material.chip.Chip
 import com.yamtrack.app.R
 import com.yamtrack.app.data.model.MediaDetails
 import com.yamtrack.app.data.model.MediaItem
-import com.yamtrack.app.data.model.MediaMeta
 import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.model.SearchResult
 import com.yamtrack.app.databinding.ActivityMediaDetailsBinding
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 
 /**
  * Detail screen for a tracked item.
@@ -89,7 +85,7 @@ class MediaDetailsActivity : AppCompatActivity() {
         // so pin a fixed card width like the home rails do.
         val seasonCardWidth = (resources.displayMetrics.density * 120).toInt()
         seasonsAdapter = SeasonsAdapter(seasonCardWidth) { season ->
-            showEpisodesDialog(season)
+            openEpisodes(season)
         }
         binding.rvSeasons.apply {
             layoutManager = LinearLayoutManager(
@@ -101,120 +97,15 @@ class MediaDetailsActivity : AppCompatActivity() {
         }
     }
 
-    private fun showEpisodesDialog(season: MediaItem) {
+    private fun openEpisodes(season: MediaItem) {
         val seasonNumber = season.item?.seasonNumber ?: return
-        val container = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            val p = (resources.displayMetrics.density * 8).toInt()
-            setPadding(p * 2, p, p * 2, p)
-        }
-        val scroll = androidx.core.widget.NestedScrollView(this).apply { addView(container) }
-        container.addView(TextView(this).apply { text = getString(R.string.loading) })
-
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.season_number, seasonNumber))
-            .setView(scroll)
-            .setPositiveButton(R.string.close, null)
-            .setNeutralButton(R.string.mark_season_watched) { _, _ ->
-                viewModel.markSeasonCompleted(seasonNumber)
+        startActivity(
+            android.content.Intent(this, com.yamtrack.app.ui.episodes.EpisodesActivity::class.java).apply {
+                putExtra(com.yamtrack.app.ui.episodes.EpisodesActivity.EXTRA_SOURCE, source)
+                putExtra(com.yamtrack.app.ui.episodes.EpisodesActivity.EXTRA_MEDIA_ID, mediaId)
+                putExtra(com.yamtrack.app.ui.episodes.EpisodesActivity.EXTRA_SEASON, seasonNumber)
             }
-            .create()
-        dialog.show()
-
-        lifecycleScope.launch {
-            val episodes = viewModel.episodesOf(seasonNumber)
-            container.removeAllViews()
-            if (episodes.isEmpty()) {
-                container.addView(TextView(this@MediaDetailsActivity).apply {
-                    text = getString(R.string.episodes)
-                    setTextColor(getColor(R.color.text_secondary))
-                })
-                return@launch
-            }
-            episodes.forEach { ep ->
-                val epNum = ep.item?.episodeNumber ?: return@forEach
-                container.addView(buildEpisodeRow(seasonNumber, epNum, ep))
-            }
-        }
-    }
-
-    private fun buildEpisodeRow(
-        seasonNumber: Int,
-        epNum: Int,
-        ep: MediaItem
-    ): View {
-        val ctx = this
-        val density = resources.displayMetrics.density
-        val row = android.widget.LinearLayout(ctx).apply {
-            orientation = android.widget.LinearLayout.HORIZONTAL
-            setPadding(0, (density * 8).toInt(), 0, 0)
-        }
-        val thumb = android.widget.ImageView(ctx).apply {
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                (density * 96).toInt(), (density * 54).toInt()
-            ).apply { marginEnd = (density * 10).toInt() }
-            scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
-            ep.image?.takeIf { it.isNotBlank() }?.let { url ->
-                load(url) {
-                    crossfade(true)
-                    placeholder(R.drawable.placeholder_poster)
-                    error(R.drawable.placeholder_poster)
-                    transformations(RoundedCornersTransformation(6f))
-                }
-            } ?: setImageResource(R.drawable.placeholder_poster)
-        }
-        val textCol = android.widget.LinearLayout(ctx).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
-            )
-        }
-        val watched = ep.mediaStatus == MediaStatus.COMPLETED
-        val check = android.widget.CheckBox(ctx).apply {
-            text = "E$epNum · ${ep.title.ifBlank { "Episode $epNum" }}"
-            isChecked = watched
-            setTextColor(getColor(R.color.white))
-            setOnCheckedChangeListener { _, isChecked ->
-                viewModel.setEpisodeWatched(seasonNumber, epNum, isChecked)
-            }
-        }
-        val meta = TextView(ctx).apply {
-            setTextColor(getColor(R.color.text_secondary))
-            textSize = 12f
-            // Last watched comes from the list entry's consumption dates.
-            val last = (ep.endDate ?: ep.progressedAt ?: ep.createdAt)?.take(10)
-            text = if (ep.mediaStatus == MediaStatus.COMPLETED && last != null)
-                getString(R.string.episode_last_watched, last)
-            else getString(R.string.episode_not_watched)
-        }
-        val detail = TextView(ctx).apply {
-            setTextColor(getColor(R.color.text_secondary))
-            textSize = 12f
-            text = getString(R.string.loading)
-        }
-        textCol.addView(check)
-        textCol.addView(meta)
-        textCol.addView(detail)
-        row.addView(thumb)
-        row.addView(textCol)
-
-        // Pull rich metadata (release date / length / description) lazily.
-        lifecycleScope.launch {
-            val d = viewModel.episodeDetail(seasonNumber, epNum)
-            if (d == null) {
-                detail.visibility = View.GONE
-                return@launch
-            }
-            val bits = mutableListOf<String>()
-            MediaMeta.releaseDate(d.details)?.let { bits.add(it) }
-            d.runtimeLabel?.let { bits.add(it) }
-            val header = bits.joinToString(" · ")
-            val desc = d.synopsis?.takeIf { it.isNotBlank() }
-            detail.text = listOfNotNull(header.takeIf { it.isNotBlank() }, desc)
-                .joinToString("\n")
-            if (detail.text.isBlank()) detail.visibility = View.GONE
-        }
-        return row
+        )
     }
 
     private fun openRecommendation(rec: SearchResult) {
