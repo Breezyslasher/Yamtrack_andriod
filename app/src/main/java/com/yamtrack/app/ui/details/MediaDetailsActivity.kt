@@ -24,7 +24,6 @@ import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.model.SearchResult
 import com.yamtrack.app.databinding.ActivityMediaDetailsBinding
-import com.yamtrack.app.ui.home.MediaAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -51,7 +50,7 @@ class MediaDetailsActivity : AppCompatActivity() {
     private lateinit var mediaId: String
 
     private lateinit var recommendationsAdapter: RecommendationsAdapter
-    private lateinit var seasonsAdapter: MediaAdapter
+    private lateinit var seasonsAdapter: SeasonsAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,7 +88,7 @@ class MediaDetailsActivity : AppCompatActivity() {
         // this horizontal rail that stretches each card to the full screen,
         // so pin a fixed card width like the home rails do.
         val seasonCardWidth = (resources.displayMetrics.density * 120).toInt()
-        seasonsAdapter = MediaAdapter(fixedItemWidthPx = seasonCardWidth) { season ->
+        seasonsAdapter = SeasonsAdapter(seasonCardWidth) { season ->
             showEpisodesDialog(season)
         }
         binding.rvSeasons.apply {
