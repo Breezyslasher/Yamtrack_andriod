@@ -85,7 +85,13 @@ class MediaDetailsActivity : AppCompatActivity() {
             adapter = recommendationsAdapter
         }
 
-        seasonsAdapter = MediaAdapter { season -> showEpisodesDialog(season) }
+        // item_media_card is match_parent (fills a library grid column); in
+        // this horizontal rail that stretches each card to the full screen,
+        // so pin a fixed card width like the home rails do.
+        val seasonCardWidth = (resources.displayMetrics.density * 120).toInt()
+        seasonsAdapter = MediaAdapter(fixedItemWidthPx = seasonCardWidth) { season ->
+            showEpisodesDialog(season)
+        }
         binding.rvSeasons.apply {
             layoutManager = LinearLayoutManager(
                 this@MediaDetailsActivity,
@@ -139,9 +145,30 @@ class MediaDetailsActivity : AppCompatActivity() {
         ep: MediaItem
     ): View {
         val ctx = this
+        val density = resources.displayMetrics.density
         val row = android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            setPadding(0, (density * 8).toInt(), 0, 0)
+        }
+        val thumb = android.widget.ImageView(ctx).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                (density * 96).toInt(), (density * 54).toInt()
+            ).apply { marginEnd = (density * 10).toInt() }
+            scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+            ep.image?.takeIf { it.isNotBlank() }?.let { url ->
+                load(url) {
+                    crossfade(true)
+                    placeholder(R.drawable.placeholder_poster)
+                    error(R.drawable.placeholder_poster)
+                    transformations(RoundedCornersTransformation(6f))
+                }
+            } ?: setImageResource(R.drawable.placeholder_poster)
+        }
+        val textCol = android.widget.LinearLayout(ctx).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(0, (resources.displayMetrics.density * 8).toInt(), 0, 0)
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+            )
         }
         val watched = ep.mediaStatus == MediaStatus.COMPLETED
         val check = android.widget.CheckBox(ctx).apply {
@@ -166,9 +193,11 @@ class MediaDetailsActivity : AppCompatActivity() {
             textSize = 12f
             text = getString(R.string.loading)
         }
-        row.addView(check)
-        row.addView(meta)
-        row.addView(detail)
+        textCol.addView(check)
+        textCol.addView(meta)
+        textCol.addView(detail)
+        row.addView(thumb)
+        row.addView(textCol)
 
         // Pull rich metadata (release date / length / description) lazily.
         lifecycleScope.launch {
