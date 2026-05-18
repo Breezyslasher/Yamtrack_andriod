@@ -13,6 +13,7 @@ import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.repository.PreferencesManager
 import com.yamtrack.app.data.repository.YamtrackRepository
 import com.yamtrack.app.ui.details.MediaDetailsActivity
+import com.yamtrack.app.ui.episodes.EpisodesActivity
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -128,18 +129,24 @@ private class CalendarRemoteViewsFactory(
             views.setImageViewResource(R.id.widgetItemPoster, R.drawable.placeholder_poster)
         }
 
-        // Per-row deep link. Episodes/seasons aren't valid detail resources,
-        // so open them as the parent TV show (the item carries the show id).
+        // Per-row deep link.
         val item = event.item
         if (item != null) {
-            val openType = when (event.mediaType) {
-                MediaType.SEASON, MediaType.EPISODE -> MediaType.TV.value
-                else -> item.mediaType
-            }
+            val isEpisodic = event.mediaType == MediaType.SEASON ||
+                event.mediaType == MediaType.EPISODE
+            val season = event.seasonNumber
             val fillIn = Intent().apply {
-                putExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE, openType)
                 putExtra(MediaDetailsActivity.EXTRA_SOURCE, item.source)
                 putExtra(MediaDetailsActivity.EXTRA_MEDIA_ID, item.mediaId)
+                if (isEpisodic && season != null) {
+                    // Open that season's episode list directly.
+                    putExtra(EpisodesActivity.EXTRA_SEASON, season)
+                } else {
+                    // Episodes/seasons aren't valid detail resources; if we
+                    // can't resolve a season, fall back to the parent show.
+                    val type = if (isEpisodic) MediaType.TV.value else item.mediaType
+                    putExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE, type)
+                }
             }
             views.setOnClickFillInIntent(R.id.widgetItemRoot, fillIn)
         } else {
