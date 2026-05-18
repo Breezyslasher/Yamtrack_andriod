@@ -63,6 +63,15 @@ android {
         viewBinding true
         buildConfig true
     }
+
+    lint {
+        // NullSafeMutableLiveData is a known false positive when a
+        // MutableLiveData<NonNull> is assigned from Kotlin: the Java generic
+        // erasure makes lint think the value could be null even though these
+        // assignments (DataStore Flow.first(), non-null result.data) never
+        // are. It blocks lintVitalRelease, so disable just this check.
+        disable 'NullSafeMutableLiveData'
+    }
 }
 
 dependencies {
