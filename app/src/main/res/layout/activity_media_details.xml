@@ -78,6 +78,15 @@
                             android:textStyle="bold" />
 
                         <TextView
+                            android:id="@+id/tvReleaseDate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="14sp"
+                            android:visibility="gone" />
+
+                        <TextView
                             android:id="@+id/tvSourceScore"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -149,6 +158,27 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     app:singleSelection="true" />
+
+                <!-- Seasons (TV only) -->
+                <TextView
+                    android:id="@+id/tvSeasonsHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    android:text="@string/seasons"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvSeasons"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:clipToPadding="false"
+                    android:orientation="horizontal"
+                    android:visibility="gone" />
 
                 <!-- Remove Button -->
                 <com.google.android.material.button.MaterialButton

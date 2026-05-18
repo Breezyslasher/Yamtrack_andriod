@@ -173,6 +173,67 @@ data class MediaDetails(
     val userScore: Double? get() = userConsumption?.score
     val userProgress: Int? get() = userConsumption?.progress
     val userNotes: String? get() = userConsumption?.notes
+
+    /**
+     * Human label for when the title aired/released. Provider metadata keys
+     * vary (TMDB/MAL/IGDB/…) and arrive in the opaque `details` map, so we
+     * probe a range of common keys and collapse to "2011" or "2011 - 2013".
+     */
+    val releaseLabel: String? get() = MediaMeta.releaseLabel(details)
+
+    /** Episode/movie length in minutes if the provider exposed it. */
+    val runtimeLabel: String? get() = MediaMeta.runtimeLabel(details)
+
+    /** When the user last logged progress for this item. */
+    val lastWatched: String? get() =
+        (userConsumption?.endDate ?: userConsumption?.progressedAt
+            ?: userConsumption?.created)?.take(10)
+}
+
+/** Defensive readers over the provider-passthrough `details` map. */
+object MediaMeta {
+    private fun str(v: Any?): String? = when (v) {
+        is String -> v.takeIf { it.isNotBlank() }
+        is Number -> v.toInt().toString()
+        else -> null
+    }
+
+    private fun year(v: Any?): String? = str(v)?.let { s ->
+        Regex("""\d{4}""").find(s)?.value
+    }
+
+    fun releaseLabel(details: Map<String, Any?>?): String? {
+        if (details == null) return null
+        val start = year(details["start_year"]) ?: year(details["first_air_date"])
+            ?: year(details["release_date"]) ?: year(details["air_date"])
+            ?: year(details["start_date"]) ?: year(details["year"])
+        val end = year(details["end_year"]) ?: year(details["last_air_date"])
+            ?: year(details["end_date"])
+        return when {
+            start == null -> null
+            end == null || end == start -> start
+            else -> "$start - $end"
+        }
+    }
+
+    fun releaseDate(details: Map<String, Any?>?): String? {
+        if (details == null) return null
+        return listOf("air_date", "release_date", "first_air_date", "start_date")
+            .firstNotNullOfOrNull { str(details[it]) }
+    }
+
+    fun runtimeLabel(details: Map<String, Any?>?): String? {
+        if (details == null) return null
+        val mins = listOf("runtime", "length", "duration", "episode_runtime")
+            .firstNotNullOfOrNull { details[it] }
+        val n = when (mins) {
+            is Number -> mins.toInt()
+            is String -> mins.trim().toIntOrNull()
+            is List<*> -> (mins.firstOrNull() as? Number)?.toInt()
+            else -> null
+        } ?: return null
+        return "$n min"
+    }
 }
 
 /**

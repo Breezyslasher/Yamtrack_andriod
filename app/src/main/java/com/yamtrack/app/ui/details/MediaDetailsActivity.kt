@@ -5,22 +5,28 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import coil.transform.RoundedCornersTransformation
 import com.google.android.material.chip.Chip
 import com.yamtrack.app.R
 import com.yamtrack.app.data.model.MediaDetails
+import com.yamtrack.app.data.model.MediaItem
+import com.yamtrack.app.data.model.MediaMeta
 import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.model.SearchResult
 import com.yamtrack.app.databinding.ActivityMediaDetailsBinding
+import com.yamtrack.app.ui.home.MediaAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 /**
  * Detail screen for a tracked item.
@@ -45,6 +51,7 @@ class MediaDetailsActivity : AppCompatActivity() {
     private lateinit var mediaId: String
 
     private lateinit var recommendationsAdapter: RecommendationsAdapter
+    private lateinit var seasonsAdapter: MediaAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +84,109 @@ class MediaDetailsActivity : AppCompatActivity() {
             )
             adapter = recommendationsAdapter
         }
+
+        seasonsAdapter = MediaAdapter { season -> showEpisodesDialog(season) }
+        binding.rvSeasons.apply {
+            layoutManager = LinearLayoutManager(
+                this@MediaDetailsActivity,
+                LinearLayoutManager.HORIZONTAL,
+                false
+            )
+            adapter = seasonsAdapter
+        }
+    }
+
+    private fun showEpisodesDialog(season: MediaItem) {
+        val seasonNumber = season.item?.seasonNumber ?: return
+        val container = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            val p = (resources.displayMetrics.density * 8).toInt()
+            setPadding(p * 2, p, p * 2, p)
+        }
+        val scroll = androidx.core.widget.NestedScrollView(this).apply { addView(container) }
+        container.addView(TextView(this).apply { text = getString(R.string.loading) })
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.season_number, seasonNumber))
+            .setView(scroll)
+            .setPositiveButton(R.string.close, null)
+            .setNeutralButton(R.string.mark_season_watched) { _, _ ->
+                viewModel.markSeasonCompleted(seasonNumber)
+            }
+            .create()
+        dialog.show()
+
+        lifecycleScope.launch {
+            val episodes = viewModel.episodesOf(seasonNumber)
+            container.removeAllViews()
+            if (episodes.isEmpty()) {
+                container.addView(TextView(this@MediaDetailsActivity).apply {
+                    text = getString(R.string.episodes)
+                    setTextColor(getColor(R.color.text_secondary))
+                })
+                return@launch
+            }
+            episodes.forEach { ep ->
+                val epNum = ep.item?.episodeNumber ?: return@forEach
+                container.addView(buildEpisodeRow(seasonNumber, epNum, ep))
+            }
+        }
+    }
+
+    private fun buildEpisodeRow(
+        seasonNumber: Int,
+        epNum: Int,
+        ep: MediaItem
+    ): View {
+        val ctx = this
+        val row = android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(0, (resources.displayMetrics.density * 8).toInt(), 0, 0)
+        }
+        val watched = ep.mediaStatus == MediaStatus.COMPLETED
+        val check = android.widget.CheckBox(ctx).apply {
+            text = "E$epNum · ${ep.title.ifBlank { "Episode $epNum" }}"
+            isChecked = watched
+            setTextColor(getColor(R.color.white))
+            setOnCheckedChangeListener { _, isChecked ->
+                viewModel.setEpisodeWatched(seasonNumber, epNum, isChecked)
+            }
+        }
+        val meta = TextView(ctx).apply {
+            setTextColor(getColor(R.color.text_secondary))
+            textSize = 12f
+            // Last watched comes from the list entry's consumption dates.
+            val last = (ep.endDate ?: ep.progressedAt ?: ep.createdAt)?.take(10)
+            text = if (ep.mediaStatus == MediaStatus.COMPLETED && last != null)
+                getString(R.string.episode_last_watched, last)
+            else getString(R.string.episode_not_watched)
+        }
+        val detail = TextView(ctx).apply {
+            setTextColor(getColor(R.color.text_secondary))
+            textSize = 12f
+            text = getString(R.string.loading)
+        }
+        row.addView(check)
+        row.addView(meta)
+        row.addView(detail)
+
+        // Pull rich metadata (release date / length / description) lazily.
+        lifecycleScope.launch {
+            val d = viewModel.episodeDetail(seasonNumber, epNum)
+            if (d == null) {
+                detail.visibility = View.GONE
+                return@launch
+            }
+            val bits = mutableListOf<String>()
+            MediaMeta.releaseDate(d.details)?.let { bits.add(it) }
+            d.runtimeLabel?.let { bits.add(it) }
+            val header = bits.joinToString(" · ")
+            val desc = d.synopsis?.takeIf { it.isNotBlank() }
+            detail.text = listOfNotNull(header.takeIf { it.isNotBlank() }, desc)
+                .joinToString("\n")
+            if (detail.text.isBlank()) detail.visibility = View.GONE
+        }
+        return row
     }
 
     private fun openRecommendation(rec: SearchResult) {
@@ -220,6 +330,13 @@ class MediaDetailsActivity : AppCompatActivity() {
             binding.rvRecommendations.visibility =
                 if (visible) View.VISIBLE else View.GONE
         }
+
+        viewModel.seasons.observe(this) { seasons ->
+            seasonsAdapter.submitList(seasons)
+            val visible = seasons.isNotEmpty()
+            binding.tvSeasonsHeader.visibility = if (visible) View.VISIBLE else View.GONE
+            binding.rvSeasons.visibility = if (visible) View.VISIBLE else View.GONE
+        }
     }
 
     private fun displayDetails(item: MediaDetails) {
@@ -240,6 +357,15 @@ class MediaDetailsActivity : AppCompatActivity() {
                     error(R.drawable.placeholder_poster)
                     transformations(RoundedCornersTransformation(16f))
                 }
+            }
+
+            // Release year / air-date range, e.g. "2011" or "2011 - 2013".
+            val release = item.releaseLabel
+            if (!release.isNullOrBlank()) {
+                tvReleaseDate.text = release
+                tvReleaseDate.visibility = View.VISIBLE
+            } else {
+                tvReleaseDate.visibility = View.GONE
             }
 
             // Status chips reflect the user's current tracked status (or none).
