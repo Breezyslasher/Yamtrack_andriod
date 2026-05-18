@@ -27,9 +27,15 @@ class MediaDetailsViewModel @Inject constructor(
     private val _recommendations = MutableLiveData<List<SearchResult>>(emptyList())
     val recommendations: LiveData<List<SearchResult>> = _recommendations
 
+    /** Whether the item is currently in the user's library. Drives the
+     *  Add-vs-Remove button and whether edits PATCH or POST. */
+    private val _tracked = MutableLiveData(false)
+    val tracked: LiveData<Boolean> = _tracked
+
     private var currentMediaType: MediaType = MediaType.MOVIE
     private var currentSource: String = "tmdb"
     private var currentMediaId: String = ""
+    private var isTracked: Boolean = false
 
     fun loadDetails(mediaType: MediaType, source: String, mediaId: String) {
         currentMediaType = mediaType
@@ -38,9 +44,25 @@ class MediaDetailsViewModel @Inject constructor(
 
         viewModelScope.launch {
             _details.value = Result.Loading
-            _details.value = repository.getMediaDetails(mediaType, source, mediaId)
+            val result = repository.getMediaDetails(mediaType, source, mediaId)
+            _details.value = result
+            if (result is Result.Success) {
+                isTracked = result.data.tracked
+                _tracked.value = isTracked
+            }
         }
         loadRecommendations()
+    }
+
+    /** Add with default Planning status (used by the explicit button). */
+    fun addToLibrary() {
+        viewModelScope.launch {
+            val result = repository.addMedia(
+                currentMediaType, currentSource, currentMediaId,
+                status = MediaStatus.PLANNING
+            )
+            _updateResult.value = applyMutationResult(result)
+        }
     }
 
     private fun loadRecommendations() {
@@ -56,59 +78,66 @@ class MediaDetailsViewModel @Inject constructor(
 
     fun updateStatus(status: MediaStatus) {
         viewModelScope.launch {
-            val result = repository.updateMedia(
-                currentMediaType,
-                currentSource,
-                currentMediaId,
-                UpdateMediaRequest(status = status.code)
-            )
-            _updateResult.value = when (result) {
-                is Result.Success -> {
-                    loadDetails(currentMediaType, currentSource, currentMediaId)
-                    OperationResult.Success
-                }
-                is Result.Error -> OperationResult.Error(result.message)
-                else -> OperationResult.Error("Unknown error")
+            // Untracked items have no record to PATCH — create it instead so
+            // picking a status (or score) from a search result just works.
+            val result = if (isTracked) {
+                repository.updateMedia(
+                    currentMediaType, currentSource, currentMediaId,
+                    UpdateMediaRequest(status = status.code)
+                )
+            } else {
+                repository.addMedia(
+                    currentMediaType, currentSource, currentMediaId,
+                    status = status
+                )
             }
+            _updateResult.value = applyMutationResult(result)
         }
     }
 
     fun updateScore(score: Double?) {
         viewModelScope.launch {
-            val result = repository.updateMedia(
-                currentMediaType,
-                currentSource,
-                currentMediaId,
-                UpdateMediaRequest(score = score)
-            )
-            _updateResult.value = when (result) {
-                is Result.Success -> {
-                    loadDetails(currentMediaType, currentSource, currentMediaId)
-                    OperationResult.Success
-                }
-                is Result.Error -> OperationResult.Error(result.message)
-                else -> OperationResult.Error("Unknown error")
+            val result = if (isTracked) {
+                repository.updateMedia(
+                    currentMediaType, currentSource, currentMediaId,
+                    UpdateMediaRequest(score = score)
+                )
+            } else {
+                repository.addMedia(
+                    currentMediaType, currentSource, currentMediaId,
+                    status = MediaStatus.PLANNING,
+                    score = score
+                )
             }
+            _updateResult.value = applyMutationResult(result)
         }
     }
 
     fun updateProgress(progress: Int) {
         viewModelScope.launch {
-            val result = repository.updateMedia(
-                currentMediaType,
-                currentSource,
-                currentMediaId,
-                UpdateMediaRequest(progress = progress)
-            )
-            _updateResult.value = when (result) {
-                is Result.Success -> {
-                    loadDetails(currentMediaType, currentSource, currentMediaId)
-                    OperationResult.Success
-                }
-                is Result.Error -> OperationResult.Error(result.message)
-                else -> OperationResult.Error("Unknown error")
+            val result = if (isTracked) {
+                repository.updateMedia(
+                    currentMediaType, currentSource, currentMediaId,
+                    UpdateMediaRequest(progress = progress)
+                )
+            } else {
+                repository.addMedia(
+                    currentMediaType, currentSource, currentMediaId,
+                    status = MediaStatus.PLANNING,
+                    progress = progress
+                )
             }
+            _updateResult.value = applyMutationResult(result)
         }
+    }
+
+    private fun <T> applyMutationResult(result: Result<T>): OperationResult = when (result) {
+        is Result.Success -> {
+            loadDetails(currentMediaType, currentSource, currentMediaId)
+            OperationResult.Success
+        }
+        is Result.Error -> OperationResult.Error(result.message)
+        else -> OperationResult.Error("Unknown error")
     }
 
     fun remove() {

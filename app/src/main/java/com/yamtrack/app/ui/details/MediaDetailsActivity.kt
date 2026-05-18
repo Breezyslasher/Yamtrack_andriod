@@ -116,11 +116,22 @@ class MediaDetailsActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        binding.btnRemove.setOnClickListener {
-            showRemoveConfirmation()
-        }
+        // The library button's role (add vs remove) is bound in the
+        // viewModel.tracked observer once details load.
         binding.tvScore.setOnClickListener {
             showScoreDialog()
+        }
+    }
+
+    private fun bindLibraryButton(tracked: Boolean) {
+        if (tracked) {
+            binding.btnRemove.text = getString(R.string.remove_from_library)
+            binding.btnRemove.setIconResource(R.drawable.ic_delete)
+            binding.btnRemove.setOnClickListener { showRemoveConfirmation() }
+        } else {
+            binding.btnRemove.text = getString(R.string.add_to_library)
+            binding.btnRemove.setIconResource(R.drawable.ic_add_circle)
+            binding.btnRemove.setOnClickListener { viewModel.addToLibrary() }
         }
     }
 
@@ -196,6 +207,10 @@ class MediaDetailsActivity : AppCompatActivity() {
                     Toast.makeText(this, opResult.message, Toast.LENGTH_LONG).show()
                 }
             }
+        }
+
+        viewModel.tracked.observe(this) { tracked ->
+            bindLibraryButton(tracked)
         }
 
         viewModel.recommendations.observe(this) { recs ->
