@@ -15,6 +15,7 @@ import com.yamtrack.app.databinding.FragmentCalendarBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -56,7 +57,8 @@ class CalendarFragment : Fragment() {
         viewModel.events.observe(viewLifecycleOwner) { result ->
             when (result) {
                 is Result.Success -> {
-                    adapter.submitList(result.data)
+                    val rows = buildRows(result.data)
+                    adapter.submitList(rows)
                     binding.progressBar.visibility = View.GONE
                     binding.tvEmpty.visibility =
                         if (result.data.isEmpty()) View.VISIBLE else View.GONE
@@ -78,6 +80,64 @@ class CalendarFragment : Fragment() {
         viewModel.isLoading.observe(viewLifecycleOwner) { loading ->
             binding.swipeRefresh.isRefreshing = loading
         }
+    }
+
+    /**
+     * Flatten the sorted events into header + event rows. Days get a
+     * relative label (Yesterday/Today/Tomorrow) within ±1 day, otherwise a
+     * "Tue, May 20" style date. Events with an unparseable date fall into a
+     * trailing "Scheduled" bucket so they're still visible.
+     */
+    private fun buildRows(events: List<CalendarEvent>): List<CalendarRow> {
+        if (events.isEmpty()) return emptyList()
+
+        val isoParser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val headerFmt = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
+
+        fun dayKey(cal: Calendar): Long {
+            val c = cal.clone() as Calendar
+            c.set(Calendar.HOUR_OF_DAY, 0)
+            c.set(Calendar.MINUTE, 0)
+            c.set(Calendar.SECOND, 0)
+            c.set(Calendar.MILLISECOND, 0)
+            return c.timeInMillis
+        }
+
+        val todayCal = Calendar.getInstance()
+        val todayKey = dayKey(todayCal)
+        val dayMs = 24L * 60 * 60 * 1000
+
+        val rows = mutableListOf<CalendarRow>()
+        var lastLabel: String? = null
+        val undated = mutableListOf<CalendarEvent>()
+
+        for (event in events) {
+            val raw = event.date?.take(10)
+            val parsed = raw?.let { runCatching { isoParser.parse(it) }.getOrNull() }
+            if (parsed == null) {
+                undated += event
+                continue
+            }
+            val cal = Calendar.getInstance().apply { time = parsed }
+            val key = dayKey(cal)
+            val label = when ((key - todayKey) / dayMs) {
+                0L -> getString(R.string.calendar_today)
+                -1L -> getString(R.string.calendar_yesterday)
+                1L -> getString(R.string.calendar_tomorrow)
+                else -> headerFmt.format(parsed)
+            }
+            if (label != lastLabel) {
+                rows += CalendarRow.Header(label)
+                lastLabel = label
+            }
+            rows += CalendarRow.Event(event)
+        }
+
+        if (undated.isNotEmpty()) {
+            rows += CalendarRow.Header(getString(R.string.calendar_scheduled))
+            undated.forEach { rows += CalendarRow.Event(it) }
+        }
+        return rows
     }
 
     private fun openEvent(event: CalendarEvent) {

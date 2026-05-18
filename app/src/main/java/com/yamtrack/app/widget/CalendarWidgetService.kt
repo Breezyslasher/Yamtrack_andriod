@@ -89,7 +89,7 @@ private class CalendarRemoteViewsFactory(
         val views = RemoteViews(context.packageName, R.layout.widget_calendar_item)
         val event = events[position]
 
-        val dateStr = event.date?.substring(0, minOf(10, event.date.length))
+        val dateStr = event.date?.let { it.substring(0, minOf(10, it.length)) }
         val parsed = dateStr?.let { runCatching { isoParser.parse(it) }.getOrNull() }
         if (parsed != null) {
             views.setTextViewText(R.id.widgetItemDay, dayFmt.format(parsed))

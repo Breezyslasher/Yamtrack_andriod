@@ -334,14 +334,18 @@ data class CalendarEvent(
     @SerializedName("item") val item: Item? = null,
     @SerializedName("item_id") val itemId: String? = null,
     @SerializedName("parent_id") val parentId: String? = null,
-    @SerializedName("date") val date: String? = null,
-    @SerializedName("content_number") val contentNumber: Int? = null,
-    @SerializedName("episode_number") val episodeNumber: Int? = null,
-    @SerializedName("season_number") val seasonNumber: Int? = null
+    // Event model field is `datetime` (a DateTimeField), serialized as an
+    // ISO-8601 string. The old "date" key never existed server-side which
+    // is why the calendar chip rendered "?".
+    @SerializedName("datetime") val datetime: String? = null,
+    @SerializedName("content_number") val contentNumber: Int? = null
 ) {
     val title: String get() = item?.title.orEmpty()
     val image: String? get() = item?.image
     val mediaType: MediaType? get() = item?.mediaType?.let { MediaType.fromValue(it) }
+    val date: String? get() = datetime
+    val seasonNumber: Int? get() = item?.seasonNumber
+    val episodeNumber: Int? get() = item?.episodeNumber ?: contentNumber
 }
 
 /**

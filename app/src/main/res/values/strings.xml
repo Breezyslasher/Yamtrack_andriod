@@ -35,6 +35,10 @@
     <string name="calendar_widget_title">Yamtrack — Upcoming</string>
     <string name="calendar_widget_loading">Loading…</string>
     <string name="calendar_widget_empty">No upcoming releases</string>
+    <string name="calendar_today">Today</string>
+    <string name="calendar_yesterday">Yesterday</string>
+    <string name="calendar_tomorrow">Tomorrow</string>
+    <string name="calendar_scheduled">Scheduled</string>
 
     <!-- Stats -->
     <string name="stats_title">Stats</string>
