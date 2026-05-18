@@ -51,10 +51,17 @@ class EpisodesViewModel @Inject constructor(
 
     fun setEpisodeWatched(episodeNumber: Int, watched: Boolean) {
         viewModelScope.launch {
-            val status = if (watched) MediaStatus.COMPLETED else MediaStatus.PLANNING
+            // Episodes only accept `end_date` (not status) — the server
+            // infers "watched" from a watch date. Empty string clears it.
+            val endDate = if (watched) {
+                java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                    .format(java.util.Date())
+            } else {
+                ""
+            }
             val r = repository.updateEpisode(
                 source, mediaId, seasonNumber, episodeNumber,
-                UpdateMediaRequest(status = status.code)
+                UpdateMediaRequest(endDate = endDate)
             )
             _message.value = (r as? Result.Error)?.message ?: "Updated"
             if (r is Result.Success) refresh()
