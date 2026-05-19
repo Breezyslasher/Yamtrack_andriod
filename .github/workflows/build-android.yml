@@ -47,14 +47,8 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Bump version
-        # Tags ship as the user-visible versionName, run number gives every CI
-        # build a unique versionCode so artifacts are easy to differentiate.
-        uses: chkfung/android-version-actions@v1.2.3
-        with:
-          gradlePath: app/build.gradle
-          versionCode: ${{ github.run_number }}
-          versionName: ${{ github.ref_type == 'tag' && github.ref_name || format('Beta {0}', github.run_number) }}
+      # versionName / versionCode come straight from app/build.gradle —
+      # it's the single source of truth. Edit them there per release.
 
       - name: Build APK
         run: |
