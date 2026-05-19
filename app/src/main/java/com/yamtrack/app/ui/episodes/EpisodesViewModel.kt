@@ -12,7 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Read-only: lists a season's episodes and their metadata. */
+/** Lists a season's episodes, their metadata, and watched state. */
 @HiltViewModel
 class EpisodesViewModel @Inject constructor(
     private val repository: YamtrackRepository
@@ -20,6 +20,9 @@ class EpisodesViewModel @Inject constructor(
 
     private val _episodes = MutableLiveData<Result<List<MediaItem>>>()
     val episodes: LiveData<Result<List<MediaItem>>> = _episodes
+
+    private val _toast = MutableLiveData<String?>()
+    val toast: LiveData<String?> = _toast
 
     private var source = ""
     private var mediaId = ""
@@ -29,11 +32,32 @@ class EpisodesViewModel @Inject constructor(
         this.source = source
         this.mediaId = mediaId
         this.seasonNumber = seasonNumber
+        refresh()
+    }
+
+    private fun refresh() {
         viewModelScope.launch {
             _episodes.value = Result.Loading
             _episodes.value = repository.getEpisodes(source, mediaId, seasonNumber)
         }
     }
+
+    fun setEpisodeWatched(episodeNumber: Int, watched: Boolean) {
+        viewModelScope.launch {
+            when (val r = repository.setEpisodeWatched(
+                source, mediaId, seasonNumber, episodeNumber, watched
+            )) {
+                is Result.Success -> refresh()
+                is Result.Error -> {
+                    _toast.value = r.message
+                    refresh() // resync checkbox to server truth
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun toastShown() { _toast.value = null }
 
     suspend fun episodeDetail(episodeNumber: Int): MediaDetails? =
         when (val r = repository.getEpisodeDetails(source, mediaId, seasonNumber, episodeNumber)) {

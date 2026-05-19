@@ -23,7 +23,8 @@ class EpisodesAdapter(
     private val scope: LifecycleCoroutineScope,
     private val titleFor: (Int, MediaItem) -> String,
     private val loadingText: String,
-    private val detailProvider: suspend (Int) -> String?
+    private val detailProvider: suspend (Int) -> String?,
+    private val onWatchedToggled: (episodeNumber: Int, watched: Boolean) -> Unit
 ) : ListAdapter<MediaItem, EpisodesAdapter.VH>(Diff()) {
 
     private val detailCache = HashMap<Int, String?>()
@@ -45,6 +46,14 @@ class EpisodesAdapter(
             val epNum = ep.item?.episodeNumber ?: 0
             binding.tvTitle.text = titleFor(epNum, ep)
             binding.ivThumb.contentDescription = binding.tvTitle.text
+
+            // Detach the listener before syncing checked state so a recycled
+            // row doesn't fire a spurious toggle.
+            binding.cbWatched.setOnCheckedChangeListener(null)
+            binding.cbWatched.isChecked = ep.tracked
+            binding.cbWatched.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked != ep.tracked) onWatchedToggled(epNum, isChecked)
+            }
 
             val image = ep.image
             if (!image.isNullOrBlank()) {

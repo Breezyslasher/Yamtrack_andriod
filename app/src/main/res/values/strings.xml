@@ -80,6 +80,7 @@
     <string name="episode_title_format">E%1$d · %2$s</string>
     <string name="episode_fallback_name">Episode %1$d</string>
     <string name="episodes_empty">No episodes found.</string>
+    <string name="episode_watched_toggle">Mark episode watched</string>
 
     <!-- Dialogs / toasts -->
     <string name="updated">Updated</string>

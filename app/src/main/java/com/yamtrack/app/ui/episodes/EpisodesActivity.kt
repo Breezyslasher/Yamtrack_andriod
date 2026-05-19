@@ -49,10 +49,20 @@ class EpisodesActivity : AppCompatActivity() {
                 )
             },
             loadingText = getString(R.string.loading),
-            detailProvider = { epNum -> episodeDetailLine(epNum) }
+            detailProvider = { epNum -> episodeDetailLine(epNum) },
+            onWatchedToggled = { epNum, watched ->
+                viewModel.setEpisodeWatched(epNum, watched)
+            }
         )
         binding.rvEpisodes.layoutManager = LinearLayoutManager(this)
         binding.rvEpisodes.adapter = adapter
+
+        viewModel.toast.observe(this) { msg ->
+            if (msg != null) {
+                android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
+                viewModel.toastShown()
+            }
+        }
 
         viewModel.episodes.observe(this) { result ->
             when (result) {

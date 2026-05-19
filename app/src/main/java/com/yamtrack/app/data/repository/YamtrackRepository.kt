@@ -265,6 +265,56 @@ class YamtrackRepository @Inject constructor(
         api.updateEpisode(MediaType.TV.value, source, mediaId, seasonNumber, episodeNumber, update)
     }
 
+    private suspend fun deleteEpisode(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int,
+        episodeNumber: Int
+    ): Result<Unit> = apiCall {
+        api.deleteEpisode(MediaType.TV.value, source, mediaId, seasonNumber, episodeNumber)
+    }
+
+    /**
+     * Mark an episode watched/unwatched.
+     *  - watched  -> POST /media/episode/ with today's end_date. If it's
+     *                already tracked the server replies 409, so fall back
+     *                to PATCH-ing the end_date instead.
+     *  - unwatched -> DELETE the episode tracking.
+     */
+    suspend fun setEpisodeWatched(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int,
+        episodeNumber: Int,
+        watched: Boolean
+    ): Result<Unit> {
+        if (!watched) {
+            return deleteEpisode(source, mediaId, seasonNumber, episodeNumber)
+        }
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+        val created = apiCall {
+            api.trackEpisode(
+                TrackEpisodeRequest(mediaId, source, seasonNumber, episodeNumber, today)
+            )
+        }
+        if (created is Result.Success) return Result.Success(Unit)
+        if (created is Result.Error && created.code == 409) {
+            // Already tracked — just refresh its watch date.
+            return updateEpisode(
+                source, mediaId, seasonNumber, episodeNumber,
+                UpdateMediaRequest(endDate = today)
+            ).let {
+                when (it) {
+                    is Result.Success -> Result.Success(Unit)
+                    is Result.Error -> it
+                    else -> Result.Error("Unknown error")
+                }
+            }
+        }
+        return (created as? Result.Error) ?: Result.Error("Unknown error")
+    }
+
     // ===================== Search =====================
 
     /**
