@@ -48,6 +48,8 @@
     <string name="stats_completed">Completed</string>
     <string name="stats_in_progress">In progress</string>
     <string name="stats_planning">Planning</string>
+    <string name="stats_paused">Paused</string>
+    <string name="stats_dropped">Dropped</string>
     <string name="stats_loading">Loading stats…</string>
     <string name="close">Close</string>
 
