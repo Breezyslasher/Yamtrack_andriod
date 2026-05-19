@@ -42,11 +42,17 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.shared
+            resValue "string", "app_name", "Yamtrack"
         }
         debug {
             minifyEnabled false
             debuggable true
             signingConfig signingConfigs.shared
+            // Distinct package + label so a debug build installs alongside
+            // a release build instead of replacing it.
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            resValue "string", "app_name", "Yamtrack Debug"
         }
     }
     

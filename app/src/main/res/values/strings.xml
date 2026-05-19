@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Yamtrack</string>
-    
+    <!-- app_name is provided per build type via resValue in build.gradle
+         so debug ("Yamtrack Debug") and release can install side by side. -->
+
     <!-- Login -->
     <string name="login">Login</string>
     <string name="api_token">API Token</string>
