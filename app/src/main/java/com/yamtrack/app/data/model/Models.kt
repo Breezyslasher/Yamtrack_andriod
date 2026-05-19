@@ -351,41 +351,88 @@ data class UserStats(
     @SerializedName("media_type_distribution") val mediaTypeDistribution: Map<String, Any?>? = null,
     @SerializedName("score_distribution") val scoreDistribution: Map<String, Any?>? = null,
     @SerializedName("top_rated") val topRated: List<Map<String, Any?>>? = null,
-    @SerializedName("status_distribution") val statusDistribution: Map<String, Any?>? = null,
+    @SerializedName("status_distribution") val statusDistribution: StatusDistribution? = null,
     @SerializedName("status_pie_chart_data") val statusPieChartData: Map<String, Any?>? = null,
     @SerializedName("timeline") val timeline: Map<String, Any?>? = null
 ) {
-    /** Total tracked items (sum of every media type). */
-    val total: Int get() = mediaCount?.values?.filterIsInstance<Number>()?.sumOf { it.toInt() } ?: 0
-
-    fun countFor(mediaType: MediaType): Int =
-        (mediaCount?.get(mediaType.value) as? Number)?.toInt() ?: 0
-
     /**
-     * Status counts derived from status_distribution. The exact shape of
-     * status_distribution depends on the server but typically holds totals.
+     * status_distribution is a Chart.js-style payload:
+     *   labels:   per-media-type readable names ("Movie", "TV Show", …)
+     *   datasets: one per status; data[i] is the count for labels[i],
+     *             total is the sum across all media types.
+     * Server status labels are exactly MediaStatus.apiName values.
      */
-    val completed: Int get() = countByStatus("Completed") ?: 0
-    val inProgress: Int get() = countByStatus("In progress") ?: 0
-    val planning: Int get() = countByStatus("Planning") ?: 0
-    val paused: Int get() = countByStatus("Paused") ?: 0
-    val dropped: Int get() = countByStatus("Dropped") ?: 0
+    private fun dataset(apiName: String): StatusDataset? =
+        statusDistribution?.datasets?.firstOrNull {
+            it.label.equals(apiName, ignoreCase = true)
+        }
 
-    private fun countByStatus(name: String): Int? {
-        val raw = statusDistribution ?: return null
-        // Try common shapes — top-level int, or nested {total: int}
-        when (val v = raw[name]) {
-            is Number -> return v.toInt()
-            is Map<*, *> -> (v["total"] as? Number)?.let { return it.toInt() }
-            else -> {}
-        }
-        // Some servers return {Completed: {tv: 12, movie: 3}} — sum sub-counts
-        (raw[name] as? Map<*, *>)?.let { sub ->
-            return sub.values.filterIsInstance<Number>().sumOf { it.toInt() }
-        }
-        return null
+    /** Server's singular readable label for a media type, e.g. TV -> "TV Show". */
+    private fun serverLabel(type: MediaType): String = when (type) {
+        MediaType.TV -> "TV Show"
+        MediaType.MOVIE -> "Movie"
+        MediaType.ANIME -> "Anime"
+        MediaType.MANGA -> "Manga"
+        MediaType.GAME -> "Game"
+        MediaType.BOOK -> "Book"
+        MediaType.COMIC -> "Comic"
+        MediaType.BOARDGAME -> "Boardgame"
+        MediaType.SEASON -> "TV Season"
+        MediaType.EPISODE -> "Episode"
     }
+
+    private fun typeIndex(type: MediaType): Int =
+        statusDistribution?.labels?.indexOfFirst {
+            it.equals(serverLabel(type), ignoreCase = true)
+        } ?: -1
+
+    /** Count for a status, optionally scoped to one media type. */
+    fun statusCount(status: MediaStatus, type: MediaType? = null): Int {
+        val ds = dataset(status.apiName) ?: return 0
+        if (type == null) return ds.total
+        val idx = typeIndex(type)
+        return if (idx in ds.data.indices) ds.data[idx] else 0
+    }
+
+    /** Total tracked items overall or for a single media type. */
+    fun totalFor(type: MediaType? = null): Int {
+        if (type == null) {
+            mediaCount?.values?.filterIsInstance<Number>()
+                ?.sumOf { it.toInt() }
+                ?.takeIf { it > 0 }
+                ?.let { return it }
+            // Fallback: sum every status across every type.
+            return statusDistribution?.datasets?.sumOf { it.total } ?: 0
+        }
+        (mediaCount?.get(type.value) as? Number)?.toInt()
+            ?.takeIf { it > 0 }
+            ?.let { return it }
+        val idx = typeIndex(type)
+        return statusDistribution?.datasets
+            ?.sumOf { if (idx in it.data.indices) it.data[idx] else 0 } ?: 0
+    }
+
+    val total: Int get() = totalFor(null)
+    val completed: Int get() = statusCount(MediaStatus.COMPLETED)
+    val inProgress: Int get() = statusCount(MediaStatus.IN_PROGRESS)
+    val planning: Int get() = statusCount(MediaStatus.PLANNING)
+    val paused: Int get() = statusCount(MediaStatus.PAUSED)
+    val dropped: Int get() = statusCount(MediaStatus.DROPPED)
+
+    fun countFor(mediaType: MediaType): Int = totalFor(mediaType)
 }
+
+data class StatusDistribution(
+    @SerializedName("labels") val labels: List<String> = emptyList(),
+    @SerializedName("datasets") val datasets: List<StatusDataset> = emptyList(),
+    @SerializedName("total_completed") val totalCompleted: Int = 0
+)
+
+data class StatusDataset(
+    @SerializedName("label") val label: String? = null,
+    @SerializedName("data") val data: List<Int> = emptyList(),
+    @SerializedName("total") val total: Int = 0
+)
 
 /**
  * Calendar event from CalendarView, serialized by EventSerializer.
