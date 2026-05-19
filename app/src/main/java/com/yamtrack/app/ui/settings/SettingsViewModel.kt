@@ -105,7 +105,10 @@ class SettingsViewModel @Inject constructor(
     fun loadStats() {
         viewModelScope.launch {
             _stats.value = Result.Loading
-            _stats.value = repository.getStatistics()
+            // start_date=all & end_date=all disables the default 1-year
+            // window; otherwise Planning items (no start/progress date)
+            // fall outside it and report as 0.
+            _stats.value = repository.getStatistics(startDate = "all", endDate = "all")
         }
     }
 }

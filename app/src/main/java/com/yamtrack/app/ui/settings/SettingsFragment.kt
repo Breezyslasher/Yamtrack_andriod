@@ -145,6 +145,8 @@ class SettingsFragment : Fragment() {
                     dialogBinding.tvError.visibility = View.GONE
                     dialogBinding.groupContent.visibility = View.VISIBLE
                     val stats = result.data
+                    // /statistics/ has no media_type param, so stats are
+                    // shown overall only — no per-type filter.
                     dialogBinding.tvTotal.text = stats.total.toString()
                     dialogBinding.tvCompleted.text = stats.completed.toString()
                     dialogBinding.tvInProgress.text = stats.inProgress.toString()
