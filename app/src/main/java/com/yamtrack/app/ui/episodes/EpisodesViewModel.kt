@@ -6,14 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yamtrack.app.data.model.MediaDetails
 import com.yamtrack.app.data.model.MediaItem
-import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.Result
-import com.yamtrack.app.data.model.UpdateMediaRequest
 import com.yamtrack.app.data.repository.YamtrackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Read-only: lists a season's episodes and their metadata. */
 @HiltViewModel
 class EpisodesViewModel @Inject constructor(
     private val repository: YamtrackRepository
@@ -21,9 +20,6 @@ class EpisodesViewModel @Inject constructor(
 
     private val _episodes = MutableLiveData<Result<List<MediaItem>>>()
     val episodes: LiveData<Result<List<MediaItem>>> = _episodes
-
-    private val _message = MutableLiveData<String?>()
-    val message: LiveData<String?> = _message
 
     private var source = ""
     private var mediaId = ""
@@ -33,10 +29,6 @@ class EpisodesViewModel @Inject constructor(
         this.source = source
         this.mediaId = mediaId
         this.seasonNumber = seasonNumber
-        refresh()
-    }
-
-    fun refresh() {
         viewModelScope.launch {
             _episodes.value = Result.Loading
             _episodes.value = repository.getEpisodes(source, mediaId, seasonNumber)
@@ -48,34 +40,4 @@ class EpisodesViewModel @Inject constructor(
             is Result.Success -> r.data
             else -> null
         }
-
-    fun setEpisodeWatched(episodeNumber: Int, watched: Boolean) {
-        viewModelScope.launch {
-            // Episodes only accept `end_date` (not status) — the server
-            // infers "watched" from a watch date. Empty string clears it.
-            val endDate = if (watched) {
-                java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                    .format(java.util.Date())
-            } else {
-                ""
-            }
-            val r = repository.updateEpisode(
-                source, mediaId, seasonNumber, episodeNumber,
-                UpdateMediaRequest(endDate = endDate)
-            )
-            _message.value = (r as? Result.Error)?.message ?: "Updated"
-            if (r is Result.Success) refresh()
-        }
-    }
-
-    fun markSeasonWatched() {
-        viewModelScope.launch {
-            val r = repository.updateSeason(
-                source, mediaId, seasonNumber,
-                UpdateMediaRequest(status = MediaStatus.COMPLETED.code)
-            )
-            _message.value = (r as? Result.Error)?.message ?: "Season marked watched"
-            if (r is Result.Success) refresh()
-        }
-    }
 }
