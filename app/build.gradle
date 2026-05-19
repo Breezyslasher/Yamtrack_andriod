@@ -41,9 +41,12 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // R8 full mode strips generic signatures and breaks Gson/
+            // Retrofit parameterized-type resolution even with keep rules.
+            // This is a sideloaded app, so just disable shrinking like
+            // debug — reliability over a smaller APK.
+            minifyEnabled false
+            shrinkResources false
             signingConfig signingConfigs.shared
             resValue "string", "app_name", "Yamtrack"
         }
