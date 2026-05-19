@@ -15,11 +15,6 @@ on:
         options:
           - debug
           - release
-      release_name:
-        description: 'Version name (e.g. "Alpha 0", "Beta 1.0", "1.0"). Blank = "Beta <run #>".'
-        type: string
-        required: false
-        default: ''
 
 jobs:
   # ───────────────────────────────────────────────
@@ -52,17 +47,8 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Bump version
-        # Priority for the user-visible versionName:
-        #   1. release_name typed into the manual run (e.g. "Alpha 0")
-        #   2. the pushed git tag
-        #   3. fallback "Beta <run #>"
-        # versionCode is always the run number so every build is unique.
-        uses: chkfung/android-version-actions@v1.2.3
-        with:
-          gradlePath: app/build.gradle
-          versionCode: ${{ github.run_number }}
-          versionName: ${{ github.event.inputs.release_name != '' && github.event.inputs.release_name || (github.ref_type == 'tag' && github.ref_name || format('Beta {0}', github.run_number)) }}
+      # versionName / versionCode come straight from app/build.gradle —
+      # it's the single source of truth. Edit them there per release.
 
       - name: Build APK
         run: |

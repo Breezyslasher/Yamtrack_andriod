@@ -13,6 +13,9 @@ android {
         applicationId "com.yamtrack.app"
         minSdk 24
         targetSdk 34
+        // Single source of truth for the app version. Bump these per
+        // release (CI no longer rewrites them). versionCode must not
+        // decrease or installs will refuse to downgrade.
         versionCode 1
         versionName "Beta 0.0.2"
 
