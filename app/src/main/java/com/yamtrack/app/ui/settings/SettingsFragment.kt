@@ -131,43 +131,6 @@ class SettingsFragment : Fragment() {
             .create()
         dialog.show()
 
-        // null == All types; chips built once the first payload arrives.
-        var selectedType: com.yamtrack.app.data.model.MediaType? = null
-        var latest: UserStats? = null
-
-        fun render() {
-            val stats = latest ?: return
-            dialogBinding.tvTotal.text = stats.totalFor(selectedType).toString()
-            dialogBinding.tvCompleted.text =
-                stats.statusCount(com.yamtrack.app.data.model.MediaStatus.COMPLETED, selectedType).toString()
-            dialogBinding.tvInProgress.text =
-                stats.statusCount(com.yamtrack.app.data.model.MediaStatus.IN_PROGRESS, selectedType).toString()
-            dialogBinding.tvPlanning.text =
-                stats.statusCount(com.yamtrack.app.data.model.MediaStatus.PLANNING, selectedType).toString()
-        }
-
-        fun buildTypeChips() {
-            val group = dialogBinding.chipGroupStatsType
-            if (group.childCount > 0) return
-            val ctx = requireContext()
-            fun addChip(label: String, type: com.yamtrack.app.data.model.MediaType?, checked: Boolean) {
-                val chip = com.google.android.material.chip.Chip(ctx).apply {
-                    text = label
-                    isCheckable = true
-                    isChecked = checked
-                    setOnClickListener {
-                        selectedType = type
-                        render()
-                    }
-                }
-                group.addView(chip)
-            }
-            addChip(getString(R.string.all), null, true)
-            com.yamtrack.app.data.model.MediaType.parentTypes.forEach {
-                addChip(it.displayName, it, false)
-            }
-        }
-
         val observer = androidx.lifecycle.Observer<Result<UserStats>> { result ->
             when (result) {
                 is Result.Loading -> {
@@ -181,9 +144,13 @@ class SettingsFragment : Fragment() {
                     dialogBinding.tvLoading.visibility = View.GONE
                     dialogBinding.tvError.visibility = View.GONE
                     dialogBinding.groupContent.visibility = View.VISIBLE
-                    latest = result.data
-                    buildTypeChips()
-                    render()
+                    val stats = result.data
+                    // /statistics/ has no media_type param, so stats are
+                    // shown overall only — no per-type filter.
+                    dialogBinding.tvTotal.text = stats.total.toString()
+                    dialogBinding.tvCompleted.text = stats.completed.toString()
+                    dialogBinding.tvInProgress.text = stats.inProgress.toString()
+                    dialogBinding.tvPlanning.text = stats.planning.toString()
                 }
                 is Result.Error -> {
                     dialogBinding.progressBar.visibility = View.GONE
