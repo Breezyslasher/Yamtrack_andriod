@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pre-Android 12 auto-backup: exclude the credential-bearing DataStore
+     and shared prefs so the API token isn't included in cloud/adb backups. -->
+<full-backup-content>
+    <exclude domain="file" path="datastore/" />
+    <exclude domain="sharedpref" path="." />
+</full-backup-content>

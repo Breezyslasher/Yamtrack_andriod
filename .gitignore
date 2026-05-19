@@ -12,3 +12,8 @@ captures/
 # Misc
 *.log
 .DS_Store
+
+# Signing — never commit the keystore or its passwords
+keystore.properties
+*.jks
+*.keystore

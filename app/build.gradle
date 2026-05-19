@@ -25,18 +25,37 @@ android {
         buildConfigField "String", "DEFAULT_SERVER_URL", '"https://yamtrack.fuzzygrim.com"'
     }
 
-    // A single checked-in keystore signs every build (debug + release, local
-    // + CI). Without this, debug builds and each ephemeral CI build use a
-    // different key, so a new APK fails to install over an old one with
-    // "App conflicts with an existing package". This key is intentionally
-    // low-secret because the app is sideloaded, not Play-distributed.
-    signingConfigs {
-        shared {
-            storeFile file("yamtrack-release.jks")
-            storePassword "yamtrack"
-            keyAlias "yamtrack"
-            keyPassword "yamtrack"
+    // Release signing key is resolved at build time, never committed:
+    //   1. keystore.properties at the repo root (gitignored, local dev)
+    //   2. SIGNING_* environment variables (GitHub Actions secrets, CI)
+    // If neither is present the release falls back to the standard
+    // Android debug keystore so builds still succeed (just not
+    // consistently signed). Configure the secrets once to keep the
+    // "installs over the old build" convenience.
+    def keystorePropsFile = rootProject.file("keystore.properties")
+    def hasSharedSigning = false
+    if (keystorePropsFile.exists()) {
+        def kp = new Properties()
+        keystorePropsFile.withInputStream { kp.load(it) }
+        signingConfigs {
+            shared {
+                storeFile file(kp.getProperty("storeFile"))
+                storePassword kp.getProperty("storePassword")
+                keyAlias kp.getProperty("keyAlias")
+                keyPassword kp.getProperty("keyPassword")
+            }
         }
+        hasSharedSigning = true
+    } else if (System.getenv("SIGNING_STORE_FILE")) {
+        signingConfigs {
+            shared {
+                storeFile file(System.getenv("SIGNING_STORE_FILE"))
+                storePassword System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+            }
+        }
+        hasSharedSigning = true
     }
 
     buildTypes {
@@ -47,13 +66,17 @@ android {
             // debug — reliability over a smaller APK.
             minifyEnabled false
             shrinkResources false
-            signingConfig signingConfigs.shared
+            if (hasSharedSigning) {
+                signingConfig signingConfigs.shared
+            }
             resValue "string", "app_name", "Yamtrack"
         }
         debug {
             minifyEnabled false
             debuggable true
-            signingConfig signingConfigs.shared
+            if (hasSharedSigning) {
+                signingConfig signingConfigs.shared
+            }
             // Distinct package + label so a debug build installs alongside
             // a release build instead of replacing it.
             applicationIdSuffix ".debug"
@@ -124,6 +147,9 @@ dependencies {
     
     // DataStore for preferences
     implementation 'androidx.datastore:datastore-preferences:1.0.0'
+
+    // Encrypted storage for the API token (Keystore-backed)
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
     
     // SwipeRefreshLayout
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'

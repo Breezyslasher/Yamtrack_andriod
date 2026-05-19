@@ -66,6 +66,11 @@ object AppModule {
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
+            // Never print the bearer token to logcat, even in debug.
+            redactHeader("Authorization")
+            redactHeader("X-API-Key")
+            redactHeader("Cookie")
+            redactHeader("Set-Cookie")
         }
 
         return OkHttpClient.Builder()

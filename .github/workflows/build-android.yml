@@ -50,7 +50,23 @@ jobs:
       # versionName / versionCode come straight from app/build.gradle —
       # it's the single source of truth. Edit them there per release.
 
+      - name: Restore signing keystore
+        # SIGNING_KEYSTORE_BASE64 is a repo secret holding
+        # `base64 -w0 yamtrack-release.jks`. Absent (e.g. forks) -> the
+        # build falls back to the debug keystore automatically.
+        env:
+          KS_B64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "SIGNING_STORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          fi
+
       - name: Build APK
+        env:
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
           if [ "${{ github.event.inputs.build_type }}" = "release" ] || [ "${{ github.ref_type }}" = "tag" ]; then

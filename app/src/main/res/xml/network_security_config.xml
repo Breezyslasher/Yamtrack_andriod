@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Cleartext (http://) stays permitted for self-hosted / LAN servers.
+         Only system CAs are trusted, so a user-installed/rogue CA can't
+         transparently MITM the app's HTTPS traffic. Debug builds still
+         allow user CAs so proxy tools (Charles/mitmproxy) work locally. -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>
