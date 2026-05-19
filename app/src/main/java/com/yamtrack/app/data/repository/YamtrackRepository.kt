@@ -1,7 +1,7 @@
 package com.yamtrack.app.data.repository
 
 import android.util.Log
-import com.google.gson.Gson
+import com.squareup.moshi.Moshi
 import com.yamtrack.app.data.api.BaseUrlProvider
 import com.yamtrack.app.data.api.TokenProvider
 import com.yamtrack.app.data.api.YamtrackApi
@@ -30,8 +30,10 @@ class YamtrackRepository @Inject constructor(
     private val api: YamtrackApi,
     private val tokenProvider: TokenProvider,
     private val baseUrlProvider: BaseUrlProvider,
-    private val gson: Gson
+    private val moshi: Moshi
 ) {
+    private val apiErrorAdapter by lazy { moshi.adapter(ApiError::class.java) }
+
     companion object {
         private const val TAG = "YamtrackRepository"
     }
@@ -371,7 +373,8 @@ class YamtrackRepository @Inject constructor(
                 httpCodeMessage(response.code())
             } else {
                 try {
-                    gson.fromJson(errorBody, ApiError::class.java).getErrorMessage()
+                    apiErrorAdapter.fromJson(errorBody)?.getErrorMessage()
+                        ?: httpCodeMessage(response.code())
                 } catch (e: Exception) {
                     httpCodeMessage(response.code())
                 }

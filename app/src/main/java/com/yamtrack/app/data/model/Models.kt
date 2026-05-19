@@ -1,6 +1,6 @@
 package com.yamtrack.app.data.model
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
 
 /**
  * Media types that can have a *parent* tracked entry.
@@ -87,13 +87,13 @@ object Sources {
  * Item metadata. Mirrors the Item Django model returned by ItemSerializer.
  */
 data class Item(
-    @SerializedName("media_id") val mediaId: String,
-    @SerializedName("source") val source: String,
-    @SerializedName("media_type") val mediaType: String,
-    @SerializedName("title") val title: String? = null,
-    @SerializedName("image") val image: String? = null,
-    @SerializedName("season_number") val seasonNumber: Int? = null,
-    @SerializedName("episode_number") val episodeNumber: Int? = null
+    @Json(name = "media_id") val mediaId: String,
+    @Json(name = "source") val source: String,
+    @Json(name = "media_type") val mediaType: String,
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "season_number") val seasonNumber: Int? = null,
+    @Json(name = "episode_number") val episodeNumber: Int? = null
 )
 
 /**
@@ -101,8 +101,8 @@ data class Item(
  * Format from CustomListItem.objects.get_user_item_lists.
  */
 data class MediaListMembership(
-    @SerializedName("id") val id: Long? = null,
-    @SerializedName("name") val name: String? = null
+    @Json(name = "id") val id: Long? = null,
+    @Json(name = "name") val name: String? = null
 )
 
 /**
@@ -112,21 +112,21 @@ data class MediaListMembership(
  * via MediaSerializer.to_representation().
  */
 data class MediaItem(
-    @SerializedName("id") val id: Long? = null,
-    @SerializedName("consumption_id") val consumptionId: Long? = null,
-    @SerializedName("item") val item: Item? = null,
-    @SerializedName("item_id") val itemId: String? = null,
-    @SerializedName("parent_id") val parentId: String? = null,
-    @SerializedName("tracked") val tracked: Boolean = false,
-    @SerializedName("created_at") val createdAt: String? = null,
-    @SerializedName("score") val score: Double? = null,
-    @SerializedName("status") val status: String? = null,
-    @SerializedName("progress") val progress: Int? = null,
-    @SerializedName("progressed_at") val progressedAt: String? = null,
-    @SerializedName("start_date") val startDate: String? = null,
-    @SerializedName("end_date") val endDate: String? = null,
-    @SerializedName("notes") val notes: String? = null,
-    @SerializedName("lists") val lists: List<MediaListMembership>? = null
+    @Json(name = "id") val id: Long? = null,
+    @Json(name = "consumption_id") val consumptionId: Long? = null,
+    @Json(name = "item") val item: Item? = null,
+    @Json(name = "item_id") val itemId: String? = null,
+    @Json(name = "parent_id") val parentId: String? = null,
+    @Json(name = "tracked") val tracked: Boolean = false,
+    @Json(name = "created_at") val createdAt: String? = null,
+    @Json(name = "score") val score: Double? = null,
+    @Json(name = "status") val status: String? = null,
+    @Json(name = "progress") val progress: Int? = null,
+    @Json(name = "progressed_at") val progressedAt: String? = null,
+    @Json(name = "start_date") val startDate: String? = null,
+    @Json(name = "end_date") val endDate: String? = null,
+    @Json(name = "notes") val notes: String? = null,
+    @Json(name = "lists") val lists: List<MediaListMembership>? = null
 ) {
     val mediaType: MediaType? get() = item?.mediaType?.let { MediaType.fromValue(it) }
     val mediaStatus: MediaStatus? get() = MediaStatus.fromApi(status)
@@ -144,26 +144,26 @@ data class MediaItem(
  * plus user tracking data.
  */
 data class MediaDetails(
-    @SerializedName("id") val id: Long? = null,
-    @SerializedName("media_id") val mediaId: String? = null,
-    @SerializedName("source") val source: String? = null,
-    @SerializedName("source_url") val sourceUrl: String? = null,
-    @SerializedName("media_type") val mediaType: String? = null,
-    @SerializedName("title") val title: String? = null,
-    @SerializedName("max_progress") val maxProgress: Int? = null,
-    @SerializedName("image") val image: String? = null,
-    @SerializedName("synopsis") val synopsis: String? = null,
-    @SerializedName("genres") val genres: List<String>? = null,
-    @SerializedName("score") val score: Double? = null,
-    @SerializedName("score_count") val scoreCount: Int? = null,
-    @SerializedName("details") val details: Map<String, Any?>? = null,
-    @SerializedName("related") val related: Map<String, Any?>? = null,
-    @SerializedName("item_id") val itemId: String? = null,
-    @SerializedName("parent_id") val parentId: String? = null,
-    @SerializedName("tracked") val tracked: Boolean = false,
-    @SerializedName("consumptions_number") val consumptionsNumber: Int = 0,
-    @SerializedName("consumptions") val consumptions: List<HistoryEntry>? = null,
-    @SerializedName("lists") val lists: List<MediaListMembership>? = null
+    @Json(name = "id") val id: Long? = null,
+    @Json(name = "media_id") val mediaId: String? = null,
+    @Json(name = "source") val source: String? = null,
+    @Json(name = "source_url") val sourceUrl: String? = null,
+    @Json(name = "media_type") val mediaType: String? = null,
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "max_progress") val maxProgress: Int? = null,
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "synopsis") val synopsis: String? = null,
+    @Json(name = "genres") val genres: List<String>? = null,
+    @Json(name = "score") val score: Double? = null,
+    @Json(name = "score_count") val scoreCount: Int? = null,
+    @Json(name = "details") val details: Map<String, Any?>? = null,
+    @Json(name = "related") val related: Map<String, Any?>? = null,
+    @Json(name = "item_id") val itemId: String? = null,
+    @Json(name = "parent_id") val parentId: String? = null,
+    @Json(name = "tracked") val tracked: Boolean = false,
+    @Json(name = "consumptions_number") val consumptionsNumber: Int = 0,
+    @Json(name = "consumptions") val consumptions: List<HistoryEntry>? = null,
+    @Json(name = "lists") val lists: List<MediaListMembership>? = null
 ) {
     val type: MediaType? get() = MediaType.fromValue(mediaType)
 
@@ -240,15 +240,15 @@ object MediaMeta {
  * History/consumption entry. From HistorySerializer.
  */
 data class HistoryEntry(
-    @SerializedName("consumption_id") val consumptionId: Long? = null,
-    @SerializedName("created") val created: String? = null,
-    @SerializedName("score") val score: Double? = null,
-    @SerializedName("progress") val progress: Int? = null,
-    @SerializedName("progressed_at") val progressedAt: String? = null,
-    @SerializedName("status") val status: String? = null,
-    @SerializedName("start_date") val startDate: String? = null,
-    @SerializedName("end_date") val endDate: String? = null,
-    @SerializedName("notes") val notes: String? = null
+    @Json(name = "consumption_id") val consumptionId: Long? = null,
+    @Json(name = "created") val created: String? = null,
+    @Json(name = "score") val score: Double? = null,
+    @Json(name = "progress") val progress: Int? = null,
+    @Json(name = "progressed_at") val progressedAt: String? = null,
+    @Json(name = "status") val status: String? = null,
+    @Json(name = "start_date") val startDate: String? = null,
+    @Json(name = "end_date") val endDate: String? = null,
+    @Json(name = "notes") val notes: String? = null
 )
 
 /**
@@ -260,16 +260,16 @@ data class HistoryEntry(
  * media_type, title, image. Everything else may or may not be present.
  */
 data class SearchResult(
-    @SerializedName("media_id") val mediaId: String? = null,
-    @SerializedName("source") val source: String? = null,
-    @SerializedName("media_type") val mediaType: String? = null,
-    @SerializedName("title") val title: String? = null,
-    @SerializedName("image") val image: String? = null,
-    @SerializedName("synopsis") val synopsis: String? = null,
-    @SerializedName("year") val year: String? = null,
-    @SerializedName("score") val score: Double? = null,
-    @SerializedName("tracked") val tracked: Boolean = false,
-    @SerializedName("item_id") val itemId: String? = null
+    @Json(name = "media_id") val mediaId: String? = null,
+    @Json(name = "source") val source: String? = null,
+    @Json(name = "media_type") val mediaType: String? = null,
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "synopsis") val synopsis: String? = null,
+    @Json(name = "year") val year: String? = null,
+    @Json(name = "score") val score: Double? = null,
+    @Json(name = "tracked") val tracked: Boolean = false,
+    @Json(name = "item_id") val itemId: String? = null
 ) {
     val type: MediaType? get() = MediaType.fromValue(mediaType)
     val displayTitle: String get() = title ?: "Unknown"
@@ -280,16 +280,16 @@ data class SearchResult(
  * From paginate_data() in api/helpers.py.
  */
 data class PaginatedResponse<T>(
-    @SerializedName("pagination") val pagination: Pagination,
-    @SerializedName("results") val results: List<T>
+    @Json(name = "pagination") val pagination: Pagination,
+    @Json(name = "results") val results: List<T>
 )
 
 data class Pagination(
-    @SerializedName("total") val total: Int,
-    @SerializedName("limit") val limit: Int,
-    @SerializedName("offset") val offset: Int,
-    @SerializedName("next") val next: String? = null,
-    @SerializedName("previous") val previous: String? = null
+    @Json(name = "total") val total: Int,
+    @Json(name = "limit") val limit: Int,
+    @Json(name = "offset") val offset: Int,
+    @Json(name = "next") val next: String? = null,
+    @Json(name = "previous") val previous: String? = null
 ) {
     val hasNext: Boolean get() = next != null
     val hasPrevious: Boolean get() = previous != null
@@ -299,13 +299,13 @@ data class Pagination(
  * Server `info` endpoint response. From InfoSerializer.
  */
 data class AppInfo(
-    @SerializedName("version") val version: String? = null,
-    @SerializedName("debug") val debug: Boolean? = null,
-    @SerializedName("frontend_url") val frontendUrl: String? = null,
-    @SerializedName("language") val language: String? = null,
-    @SerializedName("timezone") val timezone: String? = null,
-    @SerializedName("admin_enabled") val adminEnabled: Boolean? = null,
-    @SerializedName("track_time") val trackTime: Boolean? = null
+    @Json(name = "version") val version: String? = null,
+    @Json(name = "debug") val debug: Boolean? = null,
+    @Json(name = "frontend_url") val frontendUrl: String? = null,
+    @Json(name = "language") val language: String? = null,
+    @Json(name = "timezone") val timezone: String? = null,
+    @Json(name = "admin_enabled") val adminEnabled: Boolean? = null,
+    @Json(name = "track_time") val trackTime: Boolean? = null
 )
 
 /**
@@ -313,16 +313,16 @@ data class AppInfo(
  *   {status: "ok"|"unavailable", timestamp: ISO8601, checks: {plugin: {status, error}}}
  */
 data class HealthResponse(
-    @SerializedName("status") val status: String? = null,
-    @SerializedName("timestamp") val timestamp: String? = null,
-    @SerializedName("checks") val checks: Map<String, HealthCheck>? = null
+    @Json(name = "status") val status: String? = null,
+    @Json(name = "timestamp") val timestamp: String? = null,
+    @Json(name = "checks") val checks: Map<String, HealthCheck>? = null
 ) {
     val isHealthy: Boolean get() = status == "ok"
 }
 
 data class HealthCheck(
-    @SerializedName("status") val status: String? = null,
-    @SerializedName("error") val error: String? = null
+    @Json(name = "status") val status: String? = null,
+    @Json(name = "error") val error: String? = null
 )
 
 /**
@@ -344,16 +344,16 @@ data class HealthCheck(
  * accessors when possible.
  */
 data class UserStats(
-    @SerializedName("start_date") val startDate: String? = null,
-    @SerializedName("end_date") val endDate: String? = null,
-    @SerializedName("media_count") val mediaCount: Map<String, Any?>? = null,
-    @SerializedName("activity_data") val activityData: Map<String, Any?>? = null,
-    @SerializedName("media_type_distribution") val mediaTypeDistribution: Map<String, Any?>? = null,
-    @SerializedName("score_distribution") val scoreDistribution: Map<String, Any?>? = null,
-    @SerializedName("top_rated") val topRated: List<Map<String, Any?>>? = null,
-    @SerializedName("status_distribution") val statusDistribution: StatusDistribution? = null,
-    @SerializedName("status_pie_chart_data") val statusPieChartData: Map<String, Any?>? = null,
-    @SerializedName("timeline") val timeline: Map<String, Any?>? = null
+    @Json(name = "start_date") val startDate: String? = null,
+    @Json(name = "end_date") val endDate: String? = null,
+    @Json(name = "media_count") val mediaCount: Map<String, Any?>? = null,
+    @Json(name = "activity_data") val activityData: Map<String, Any?>? = null,
+    @Json(name = "media_type_distribution") val mediaTypeDistribution: Map<String, Any?>? = null,
+    @Json(name = "score_distribution") val scoreDistribution: Map<String, Any?>? = null,
+    @Json(name = "top_rated") val topRated: List<Map<String, Any?>>? = null,
+    @Json(name = "status_distribution") val statusDistribution: StatusDistribution? = null,
+    @Json(name = "status_pie_chart_data") val statusPieChartData: Map<String, Any?>? = null,
+    @Json(name = "timeline") val timeline: Map<String, Any?>? = null
 ) {
     /**
      * status_distribution is a Chart.js-style payload:
@@ -418,30 +418,30 @@ data class UserStats(
 }
 
 data class StatusDistribution(
-    @SerializedName("labels") val labels: List<String> = emptyList(),
-    @SerializedName("datasets") val datasets: List<StatusDataset> = emptyList(),
-    @SerializedName("total_completed") val totalCompleted: Int = 0
+    @Json(name = "labels") val labels: List<String> = emptyList(),
+    @Json(name = "datasets") val datasets: List<StatusDataset> = emptyList(),
+    @Json(name = "total_completed") val totalCompleted: Int = 0
 )
 
 data class StatusDataset(
-    @SerializedName("label") val label: String? = null,
-    @SerializedName("data") val data: List<Int> = emptyList(),
-    @SerializedName("total") val total: Int = 0
+    @Json(name = "label") val label: String? = null,
+    @Json(name = "data") val data: List<Int> = emptyList(),
+    @Json(name = "total") val total: Int = 0
 )
 
 /**
  * Calendar event from CalendarView, serialized by EventSerializer.
  */
 data class CalendarEvent(
-    @SerializedName("id") val id: Long? = null,
-    @SerializedName("item") val item: Item? = null,
-    @SerializedName("item_id") val itemId: String? = null,
-    @SerializedName("parent_id") val parentId: String? = null,
+    @Json(name = "id") val id: Long? = null,
+    @Json(name = "item") val item: Item? = null,
+    @Json(name = "item_id") val itemId: String? = null,
+    @Json(name = "parent_id") val parentId: String? = null,
     // Event model field is `datetime` (a DateTimeField), serialized as an
     // ISO-8601 string. The old "date" key never existed server-side which
     // is why the calendar chip rendered "?".
-    @SerializedName("datetime") val datetime: String? = null,
-    @SerializedName("content_number") val contentNumber: Int? = null
+    @Json(name = "datetime") val datetime: String? = null,
+    @Json(name = "content_number") val contentNumber: Int? = null
 ) {
     val title: String get() = item?.title.orEmpty()
     val image: String? get() = item?.image
@@ -455,20 +455,20 @@ data class CalendarEvent(
  * Custom list. From ListSerializer.
  */
 data class CustomList(
-    @SerializedName("id") val id: Long,
-    @SerializedName("name") val name: String,
-    @SerializedName("description") val description: String? = null,
-    @SerializedName("image") val image: String? = null,
-    @SerializedName("owner") val owner: ListUser? = null,
-    @SerializedName("collaborators") val collaborators: List<ListUser>? = null,
-    @SerializedName("items_count") val itemsCount: Int = 0,
-    @SerializedName("latest_update") val latestUpdate: String? = null,
-    @SerializedName("items") val items: PaginatedResponse<MediaItem>? = null
+    @Json(name = "id") val id: Long,
+    @Json(name = "name") val name: String,
+    @Json(name = "description") val description: String? = null,
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "owner") val owner: ListUser? = null,
+    @Json(name = "collaborators") val collaborators: List<ListUser>? = null,
+    @Json(name = "items_count") val itemsCount: Int = 0,
+    @Json(name = "latest_update") val latestUpdate: String? = null,
+    @Json(name = "items") val items: PaginatedResponse<MediaItem>? = null
 )
 
 data class ListUser(
-    @SerializedName("id") val id: Long,
-    @SerializedName("username") val username: String
+    @Json(name = "id") val id: Long,
+    @Json(name = "username") val username: String
 )
 
 /**
@@ -476,8 +476,8 @@ data class ListUser(
  * (sometimes with an "errors" sub-field for validation problems).
  */
 data class ApiError(
-    @SerializedName("detail") val detail: String? = null,
-    @SerializedName("errors") val errors: Any? = null
+    @Json(name = "detail") val detail: String? = null,
+    @Json(name = "errors") val errors: Any? = null
 ) {
     fun getErrorMessage(): String = detail ?: "Unknown error"
 }
@@ -491,14 +491,14 @@ data class ApiError(
  *  - run the appropriate form for the media_type
  */
 data class AddMediaRequest(
-    @SerializedName("media_id") val mediaId: String,
-    @SerializedName("source") val source: String,
-    @SerializedName("status") val status: Int? = null,
-    @SerializedName("score") val score: Double? = null,
-    @SerializedName("progress") val progress: Int? = null,
-    @SerializedName("start_date") val startDate: String? = null,
-    @SerializedName("end_date") val endDate: String? = null,
-    @SerializedName("notes") val notes: String? = null
+    @Json(name = "media_id") val mediaId: String,
+    @Json(name = "source") val source: String,
+    @Json(name = "status") val status: Int? = null,
+    @Json(name = "score") val score: Double? = null,
+    @Json(name = "progress") val progress: Int? = null,
+    @Json(name = "start_date") val startDate: String? = null,
+    @Json(name = "end_date") val endDate: String? = null,
+    @Json(name = "notes") val notes: String? = null
 )
 
 /**
@@ -506,12 +506,12 @@ data class AddMediaRequest(
  * Only fields in MEDIA_MODIFIABLE_FIELDS for the given media type are honored.
  */
 data class UpdateMediaRequest(
-    @SerializedName("status") val status: Int? = null,
-    @SerializedName("score") val score: Double? = null,
-    @SerializedName("progress") val progress: Int? = null,
-    @SerializedName("start_date") val startDate: String? = null,
-    @SerializedName("end_date") val endDate: String? = null,
-    @SerializedName("notes") val notes: String? = null
+    @Json(name = "status") val status: Int? = null,
+    @Json(name = "score") val score: Double? = null,
+    @Json(name = "progress") val progress: Int? = null,
+    @Json(name = "start_date") val startDate: String? = null,
+    @Json(name = "end_date") val endDate: String? = null,
+    @Json(name = "notes") val notes: String? = null
 )
 
 /**
