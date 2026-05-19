@@ -151,6 +151,8 @@ class SettingsFragment : Fragment() {
                     dialogBinding.tvCompleted.text = stats.completed.toString()
                     dialogBinding.tvInProgress.text = stats.inProgress.toString()
                     dialogBinding.tvPlanning.text = stats.planning.toString()
+                    dialogBinding.tvPaused.text = stats.paused.toString()
+                    dialogBinding.tvDropped.text = stats.dropped.toString()
                 }
                 is Result.Error -> {
                     dialogBinding.progressBar.visibility = View.GONE

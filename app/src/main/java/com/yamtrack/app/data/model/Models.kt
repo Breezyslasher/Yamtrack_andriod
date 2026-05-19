@@ -394,22 +394,17 @@ data class UserStats(
         return if (idx in ds.data.indices) ds.data[idx] else 0
     }
 
-    /** Total tracked items overall or for a single media type. */
+    /**
+     * Total tracked items overall or for a single media type. Derived from
+     * the status datasets (not media_count) so Total always equals the sum
+     * of the per-status numbers shown — media_count also counts seasons/
+     * episodes, which would make Total look inconsistent.
+     */
     fun totalFor(type: MediaType? = null): Int {
-        if (type == null) {
-            mediaCount?.values?.filterIsInstance<Number>()
-                ?.sumOf { it.toInt() }
-                ?.takeIf { it > 0 }
-                ?.let { return it }
-            // Fallback: sum every status across every type.
-            return statusDistribution?.datasets?.sumOf { it.total } ?: 0
-        }
-        (mediaCount?.get(type.value) as? Number)?.toInt()
-            ?.takeIf { it > 0 }
-            ?.let { return it }
+        val ds = statusDistribution?.datasets ?: return 0
+        if (type == null) return ds.sumOf { it.total }
         val idx = typeIndex(type)
-        return statusDistribution?.datasets
-            ?.sumOf { if (idx in it.data.indices) it.data[idx] else 0 } ?: 0
+        return ds.sumOf { if (idx in it.data.indices) it.data[idx] else 0 }
     }
 
     val total: Int get() = totalFor(null)
