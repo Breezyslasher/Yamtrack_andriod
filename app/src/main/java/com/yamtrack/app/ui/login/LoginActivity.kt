@@ -93,13 +93,13 @@ class LoginActivity : AppCompatActivity() {
                 val newUrl = editText.text.toString().trim()
                 if (newUrl.isNotEmpty()) {
                     viewModel.setServerUrl(newUrl)
-                    Toast.makeText(this, "Server URL updated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.server_url_updated, Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton(R.string.cancel, null)
-            .setNeutralButton("Reset to Default") { _, _ ->
+            .setNeutralButton(R.string.reset_to_default) { _, _ ->
                 viewModel.setServerUrl(BuildConfig.DEFAULT_SERVER_URL)
-                Toast.makeText(this, "Reset to default", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.reset_to_default, Toast.LENGTH_SHORT).show()
             }
             .show()
     }
@@ -109,7 +109,7 @@ class LoginActivity : AppCompatActivity() {
         val profileUrl = "$url/profile/"
 
         AlertDialog.Builder(this)
-            .setTitle("How to get your API token")
+            .setTitle(R.string.how_to_get_token_title)
             .setMessage(
                 "1. Open your Yamtrack server in a web browser\n" +
                 "2. Log in with your username and password\n" +
@@ -120,14 +120,14 @@ class LoginActivity : AppCompatActivity() {
                 "PR #924 (the REST API). Check the /api/v1/health/ endpoint to verify.\n\n" +
                 "Profile URL: $profileUrl"
             )
-            .setPositiveButton("Open Profile") { _, _ ->
+            .setPositiveButton(R.string.open_profile) { _, _ ->
                 try {
                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(profileUrl)))
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Could not open browser", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.could_not_open_browser, Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("Close", null)
+            .setNegativeButton(R.string.close, null)
             .show()
     }
 

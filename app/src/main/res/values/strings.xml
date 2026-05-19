@@ -77,6 +77,24 @@
     <string name="mark_season_watched">Mark season watched</string>
     <string name="episode_last_watched">Last watched %1$s</string>
     <string name="episode_not_watched">Not watched yet</string>
+    <string name="episode_title_format">E%1$d · %2$s</string>
+    <string name="episode_fallback_name">Episode %1$d</string>
+    <string name="episodes_empty">No episodes found.</string>
+
+    <!-- Dialogs / toasts -->
+    <string name="updated">Updated</string>
+    <string name="removed_from_library">Removed from library</string>
+    <string name="remove_confirm_title">Remove from Library</string>
+    <string name="remove_confirm_message">Are you sure you want to remove this from your library?</string>
+    <string name="remove">Remove</string>
+    <string name="logout_confirm_message">Are you sure you want to logout?</string>
+    <string name="server_change_warning">Changing the server will log you out.</string>
+    <string name="server_url_updated">Server URL updated</string>
+    <string name="reset_to_default">Reset to default</string>
+    <string name="how_to_get_token_title">How to get your API token</string>
+    <string name="open_profile">Open Profile</string>
+    <string name="could_not_open_browser">Could not open browser</string>
+    <string name="poster">Poster</string>
     <string name="set_score_title">Set your score</string>
     <string name="set_score_hint">0.0 – 10.0</string>
     <string name="clear_score">Clear</string>

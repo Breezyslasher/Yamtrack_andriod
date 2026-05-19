@@ -1,5 +1,6 @@
 package com.yamtrack.app.util
 
+import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.yamtrack.app.BuildConfig
@@ -7,11 +8,14 @@ import com.yamtrack.app.data.api.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -57,9 +61,29 @@ object AppModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(
+        @ApplicationContext context: Context,
         authInterceptor: AuthInterceptor,
         baseUrlInterceptor: BaseUrlInterceptor
     ): OkHttpClient {
+        // 15 MB on-disk HTTP cache. Responses are revalidated normally;
+        // when the device is offline we serve stale GETs (up to a week)
+        // so list/detail screens aren't blank without a connection.
+        val cache = Cache(File(context.cacheDir, "http_cache"), 15L * 1024 * 1024)
+        val offlineFallback = okhttp3.Interceptor { chain ->
+            var request = chain.request()
+            if (request.method == "GET") {
+                val online = runCatching {
+                    val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+                    cm?.activeNetwork != null
+                }.getOrDefault(true)
+                if (!online) {
+                    request = request.newBuilder()
+                        .header("Cache-Control", "public, only-if-cached, max-stale=604800")
+                        .build()
+                }
+            }
+            chain.proceed(request)
+        }
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
@@ -74,8 +98,10 @@ object AppModule {
         }
 
         return OkHttpClient.Builder()
+            .cache(cache)
             .addInterceptor(baseUrlInterceptor)
             .addInterceptor(authInterceptor)
+            .addInterceptor(offlineFallback)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
