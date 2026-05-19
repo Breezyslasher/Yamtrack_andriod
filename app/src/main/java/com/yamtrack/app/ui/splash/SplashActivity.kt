@@ -5,9 +5,11 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.app.TaskStackBuilder
 import com.yamtrack.app.MainActivity
+import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.repository.PreferencesManager
 import com.yamtrack.app.data.repository.YamtrackRepository
 import com.yamtrack.app.ui.details.MediaDetailsActivity
+import com.yamtrack.app.ui.episodes.EpisodesActivity
 import com.yamtrack.app.ui.login.LoginActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
@@ -49,8 +51,27 @@ class SplashActivity : AppCompatActivity() {
             val mediaType = intent.getStringExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE)
             val source = intent.getStringExtra(MediaDetailsActivity.EXTRA_SOURCE)
             val mediaId = intent.getStringExtra(MediaDetailsActivity.EXTRA_MEDIA_ID)
+            val season = intent.getIntExtra(EpisodesActivity.EXTRA_SEASON, -1)
 
-            if (mediaType != null && source != null && mediaId != null) {
+            if (source != null && mediaId != null && season >= 0) {
+                // Widget episode tap → open that season's episode list
+                // (with the show detail and app beneath it).
+                val show = Intent(this, MediaDetailsActivity::class.java).apply {
+                    putExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE, MediaType.TV.value)
+                    putExtra(MediaDetailsActivity.EXTRA_SOURCE, source)
+                    putExtra(MediaDetailsActivity.EXTRA_MEDIA_ID, mediaId)
+                }
+                val episodes = Intent(this, EpisodesActivity::class.java).apply {
+                    putExtra(EpisodesActivity.EXTRA_SOURCE, source)
+                    putExtra(EpisodesActivity.EXTRA_MEDIA_ID, mediaId)
+                    putExtra(EpisodesActivity.EXTRA_SEASON, season)
+                }
+                TaskStackBuilder.create(this)
+                    .addNextIntent(Intent(this, MainActivity::class.java))
+                    .addNextIntent(show)
+                    .addNextIntent(episodes)
+                    .startActivities()
+            } else if (mediaType != null && source != null && mediaId != null) {
                 // Deep link from the widget: open the item with MainActivity
                 // beneath it so Back returns to the app rather than the home
                 // screen.

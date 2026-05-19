@@ -42,6 +42,12 @@
             android:theme="@style/Theme.Yamtrack.NoActionBar"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".ui.episodes.EpisodesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Yamtrack.NoActionBar"
+            android:parentActivityName=".ui.details.MediaDetailsActivity" />
+
         <!-- Calendar widget -->
         <receiver
             android:name=".widget.CalendarWidgetProvider"
