@@ -10,6 +10,7 @@
 
     <ImageView
         android:id="@+id/widgetItemPoster"
+        android:contentDescription="@string/poster"
         android:layout_width="34dp"
         android:layout_height="50dp"
         android:scaleType="centerCrop"

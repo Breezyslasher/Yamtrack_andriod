@@ -217,7 +217,7 @@ class MediaDetailsActivity : AppCompatActivity() {
         viewModel.updateResult.observe(this) { opResult ->
             when (opResult) {
                 is MediaDetailsViewModel.OperationResult.Success -> {
-                    Toast.makeText(this, "Updated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.updated, Toast.LENGTH_SHORT).show()
                 }
                 is MediaDetailsViewModel.OperationResult.Error -> {
                     Toast.makeText(this, opResult.message, Toast.LENGTH_LONG).show()
@@ -228,7 +228,7 @@ class MediaDetailsActivity : AppCompatActivity() {
         viewModel.removeResult.observe(this) { opResult ->
             when (opResult) {
                 is MediaDetailsViewModel.OperationResult.Success -> {
-                    Toast.makeText(this, "Removed from library", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.removed_from_library, Toast.LENGTH_SHORT).show()
                     finish()
                 }
                 is MediaDetailsViewModel.OperationResult.Error -> {
@@ -334,9 +334,9 @@ class MediaDetailsActivity : AppCompatActivity() {
 
     private fun showRemoveConfirmation() {
         AlertDialog.Builder(this)
-            .setTitle("Remove from Library")
-            .setMessage("Are you sure you want to remove this from your library?")
-            .setPositiveButton("Remove") { _, _ -> viewModel.remove() }
+            .setTitle(R.string.remove_confirm_title)
+            .setMessage(R.string.remove_confirm_message)
+            .setPositiveButton(R.string.remove) { _, _ -> viewModel.remove() }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }

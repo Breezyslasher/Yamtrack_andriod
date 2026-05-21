@@ -1,7 +1,7 @@
 package com.yamtrack.app.data.repository
 
 import android.util.Log
-import com.google.gson.Gson
+import com.squareup.moshi.Moshi
 import com.yamtrack.app.data.api.BaseUrlProvider
 import com.yamtrack.app.data.api.TokenProvider
 import com.yamtrack.app.data.api.YamtrackApi
@@ -30,8 +30,10 @@ class YamtrackRepository @Inject constructor(
     private val api: YamtrackApi,
     private val tokenProvider: TokenProvider,
     private val baseUrlProvider: BaseUrlProvider,
-    private val gson: Gson
+    private val moshi: Moshi
 ) {
+    private val apiErrorAdapter by lazy { moshi.adapter(ApiError::class.java) }
+
     companion object {
         private const val TAG = "YamtrackRepository"
     }
@@ -263,6 +265,68 @@ class YamtrackRepository @Inject constructor(
         api.updateEpisode(MediaType.TV.value, source, mediaId, seasonNumber, episodeNumber, update)
     }
 
+    private suspend fun deleteEpisode(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int,
+        episodeNumber: Int
+    ): Result<Unit> = apiCall {
+        api.deleteEpisode(MediaType.TV.value, source, mediaId, seasonNumber, episodeNumber)
+    }
+
+    /**
+     * Mark an episode watched/unwatched.
+     *  - watched  -> POST /media/episode/ with today's end_date. If it's
+     *                already tracked the server replies 409, so fall back
+     *                to PATCH-ing the end_date instead.
+     *  - unwatched -> DELETE the episode tracking.
+     *
+     * Note: the server's POST /media/episode/ has a known bug where it
+     * doesn't forward `episode_number` to services.get_media_metadata for
+     * provider sources, which surfaces as a 500 with detail
+     * "Internal Server Error." We translate that into a clearer message
+     * so the toast isn't misleading.
+     */
+    suspend fun setEpisodeWatched(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int,
+        episodeNumber: Int,
+        watched: Boolean
+    ): Result<Unit> {
+        if (!watched) {
+            return deleteEpisode(source, mediaId, seasonNumber, episodeNumber)
+        }
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+        val created = apiCall {
+            api.trackEpisode(
+                TrackEpisodeRequest(mediaId, source, seasonNumber, episodeNumber, today)
+            )
+        }
+        if (created is Result.Success) return Result.Success(Unit)
+        if (created is Result.Error && created.code == 409) {
+            // Already tracked — just refresh its watch date.
+            return updateEpisode(
+                source, mediaId, seasonNumber, episodeNumber,
+                UpdateMediaRequest(endDate = today)
+            ).let {
+                when (it) {
+                    is Result.Success -> Result.Success(Unit)
+                    is Result.Error -> it
+                    else -> Result.Error("Unknown error")
+                }
+            }
+        }
+        val err = created as? Result.Error ?: return Result.Error("Unknown error")
+        // Translate the known server-side episode-POST bug into a useful
+        // toast instead of the raw "Internal Server Error." detail.
+        val friendly = if (err.code == 500) {
+            "This server build can't track new episodes yet (server bug in POST /media/episode/)."
+        } else err.message
+        return Result.Error(friendly, err.code)
+    }
+
     // ===================== Search =====================
 
     /**
@@ -371,7 +435,8 @@ class YamtrackRepository @Inject constructor(
                 httpCodeMessage(response.code())
             } else {
                 try {
-                    gson.fromJson(errorBody, ApiError::class.java).getErrorMessage()
+                    apiErrorAdapter.fromJson(errorBody)?.getErrorMessage()
+                        ?: httpCodeMessage(response.code())
                 } catch (e: Exception) {
                     httpCodeMessage(response.code())
                 }

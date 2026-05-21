@@ -67,42 +67,8 @@ class MediaDetailsViewModel @Inject constructor(
         }
     }
 
-    /** Episodes for a season, fetched lazily when the season is opened. */
-    suspend fun episodesOf(seasonNumber: Int): List<MediaItem> =
-        when (val r = repository.getEpisodes(currentSource, currentMediaId, seasonNumber)) {
-            is Result.Success -> r.data
-            else -> emptyList()
-        }
-
-    /** Rich metadata for a single episode (title, date, length, overview). */
-    suspend fun episodeDetail(seasonNumber: Int, episodeNumber: Int): MediaDetails? =
-        when (val r = repository.getEpisodeDetails(
-            currentSource, currentMediaId, seasonNumber, episodeNumber
-        )) {
-            is Result.Success -> r.data
-            else -> null
-        }
-
-    fun markSeasonCompleted(seasonNumber: Int) {
-        viewModelScope.launch {
-            val result = repository.updateSeason(
-                currentSource, currentMediaId, seasonNumber,
-                UpdateMediaRequest(status = MediaStatus.COMPLETED.code)
-            )
-            _updateResult.value = applyMutationResult(result)
-        }
-    }
-
-    fun setEpisodeWatched(seasonNumber: Int, episodeNumber: Int, watched: Boolean) {
-        viewModelScope.launch {
-            val status = if (watched) MediaStatus.COMPLETED else MediaStatus.PLANNING
-            val result = repository.updateEpisode(
-                currentSource, currentMediaId, seasonNumber, episodeNumber,
-                UpdateMediaRequest(status = status.code)
-            )
-            _updateResult.value = applyMutationResult(result)
-        }
-    }
+    // Episode-level tracking lives in EpisodesActivity/EpisodesViewModel
+    // (via the correct POST /media/episode/ + DELETE endpoints), not here.
 
     /** Add with default Planning status (used by the explicit button). */
     fun addToLibrary() {

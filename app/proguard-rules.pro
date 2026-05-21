@@ -25,14 +25,14 @@
 -dontwarn okio.**
 -keep class okhttp3.** { *; }
 
-# Gson
--keep class com.google.gson.** { *; }
--keep class * implements com.google.gson.TypeAdapterFactory
--keep class * implements com.google.gson.JsonSerializer
--keep class * implements com.google.gson.JsonDeserializer
--keepclassmembers,allowobfuscation class * {
-    @com.google.gson.annotations.SerializedName <fields>;
+# Moshi (reflective Kotlin adapter)
+-keep class com.squareup.moshi.** { *; }
+-keep @com.squareup.moshi.JsonClass class * { *; }
+-keepclassmembers class * {
+    @com.squareup.moshi.Json <fields>;
 }
+-keepclassmembers class kotlin.Metadata { *; }
+-keep class kotlin.reflect.jvm.internal.** { *; }
 
 # Data models (keep names + members so reflection-based JSON works)
 -keep class com.yamtrack.app.data.model.** { *; }

@@ -1,17 +1,21 @@
 package com.yamtrack.app.util
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
+import android.content.Context
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.yamtrack.app.BuildConfig
 import com.yamtrack.app.data.api.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.moshi.MoshiConverterFactory
+import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -19,7 +23,7 @@ import javax.inject.Singleton
  * Hilt dependency injection module.
  * 
  * Wires up:
- *  - Gson for JSON parsing
+ *  - Moshi for JSON parsing
  *  - OkHttp client with auth + logging interceptors
  *  - Retrofit instance pointing at the configured base URL
  *  - YamtrackApi instance
@@ -31,9 +35,12 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideGson(): Gson = GsonBuilder()
-        .setLenient()
-        .create()
+    fun provideMoshi(): Moshi = Moshi.Builder()
+        // Custom Any adapter must precede the reflective Kotlin factory,
+        // which must be added last so it doesn't shadow built-ins.
+        .add(MoshiAnyAdapter())
+        .addLast(KotlinJsonAdapterFactory())
+        .build()
 
     @Provides
     @Singleton
@@ -57,9 +64,29 @@ object AppModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(
+        @ApplicationContext context: Context,
         authInterceptor: AuthInterceptor,
         baseUrlInterceptor: BaseUrlInterceptor
     ): OkHttpClient {
+        // 15 MB on-disk HTTP cache. Responses are revalidated normally;
+        // when the device is offline we serve stale GETs (up to a week)
+        // so list/detail screens aren't blank without a connection.
+        val cache = Cache(File(context.cacheDir, "http_cache"), 15L * 1024 * 1024)
+        val offlineFallback = okhttp3.Interceptor { chain ->
+            var request = chain.request()
+            if (request.method == "GET") {
+                val online = runCatching {
+                    val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+                    cm?.activeNetwork != null
+                }.getOrDefault(true)
+                if (!online) {
+                    request = request.newBuilder()
+                        .header("Cache-Control", "public, only-if-cached, max-stale=604800")
+                        .build()
+                }
+            }
+            chain.proceed(request)
+        }
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
@@ -74,8 +101,10 @@ object AppModule {
         }
 
         return OkHttpClient.Builder()
+            .cache(cache)
             .addInterceptor(baseUrlInterceptor)
             .addInterceptor(authInterceptor)
+            .addInterceptor(offlineFallback)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -87,7 +116,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient, gson: Gson): Retrofit = Retrofit.Builder()
+    fun provideRetrofit(client: OkHttpClient, moshi: Moshi): Retrofit = Retrofit.Builder()
         // Base URL is required by Retrofit but our BaseUrlInterceptor
         // overrides the scheme/host/port on every request, so this
         // is effectively just a placeholder.
@@ -95,7 +124,7 @@ object AppModule {
             if (it.endsWith("/")) it else "$it/"
         })
         .client(client)
-        .addConverterFactory(GsonConverterFactory.create(gson))
+        .addConverterFactory(MoshiConverterFactory.create(moshi).asLenient())
         .build()
 
     @Provides

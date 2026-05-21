@@ -95,7 +95,7 @@ class SettingsFragment : Fragment() {
 
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.server_url)
-            .setMessage("Changing the server will log you out.")
+            .setMessage(R.string.server_change_warning)
             .setView(editText)
             .setPositiveButton(R.string.save) { _, _ ->
                 val newUrl = editText.text.toString().trim()
@@ -110,7 +110,7 @@ class SettingsFragment : Fragment() {
                 }
             }
             .setNegativeButton(R.string.cancel, null)
-            .setNeutralButton("Reset Default") { _, _ ->
+            .setNeutralButton(R.string.reset_to_default) { _, _ ->
                 viewModel.setServerUrl(BuildConfig.DEFAULT_SERVER_URL)
                 Toast.makeText(
                     requireContext(),
@@ -172,7 +172,7 @@ class SettingsFragment : Fragment() {
     private fun showLogoutConfirmation() {
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.logout)
-            .setMessage("Are you sure you want to logout?")
+            .setMessage(R.string.logout_confirm_message)
             .setPositiveButton(R.string.logout) { _, _ -> viewModel.logout() }
             .setNegativeButton(R.string.cancel, null)
             .show()
