@@ -39,6 +39,7 @@ class PreferencesManager @Inject constructor(
         val SHOW_ADULT_CONTENT = booleanPreferencesKey("show_adult_content")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val DEFAULT_MEDIA_TYPE = stringPreferencesKey("default_media_type")
+        val HIDE_UNWATCHED_EPISODE_INFO = booleanPreferencesKey("hide_unwatched_episode_info")
     }
 
     private companion object {
@@ -102,6 +103,10 @@ class PreferencesManager @Inject constructor(
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { it[Keys.DEFAULT_MEDIA_TYPE] ?: "movie" }
 
+    val hideUnwatchedEpisodeInfo: Flow<Boolean> = context.dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[Keys.HIDE_UNWATCHED_EPISODE_INFO] ?: false }
+
     suspend fun setServerUrl(url: String) {
         context.dataStore.edit { it[Keys.SERVER_URL] = url.trimEnd('/') }
     }
@@ -130,6 +135,10 @@ class PreferencesManager @Inject constructor(
 
     suspend fun setDefaultMediaType(type: String) {
         context.dataStore.edit { it[Keys.DEFAULT_MEDIA_TYPE] = type }
+    }
+
+    suspend fun setHideUnwatchedEpisodeInfo(hide: Boolean) {
+        context.dataStore.edit { it[Keys.HIDE_UNWATCHED_EPISODE_INFO] = hide }
     }
 
     suspend fun clearSession() {

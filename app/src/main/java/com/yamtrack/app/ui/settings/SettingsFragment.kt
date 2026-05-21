@@ -58,6 +58,10 @@ class SettingsFragment : Fragment() {
             viewModel.setNotificationsEnabled(isChecked)
         }
 
+        binding.switchHideUnwatched.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setHideUnwatchedEpisodeInfo(isChecked)
+        }
+
         // Stats
         binding.layoutStats.setOnClickListener { showStatsDialog() }
 
@@ -75,6 +79,12 @@ class SettingsFragment : Fragment() {
 
         viewModel.showAdultContent.observe(viewLifecycleOwner) { show ->
             binding.switchAdultContent.isChecked = show
+        }
+
+        viewModel.hideUnwatchedEpisodeInfo.observe(viewLifecycleOwner) { hide ->
+            if (binding.switchHideUnwatched.isChecked != hide) {
+                binding.switchHideUnwatched.isChecked = hide
+            }
         }
 
         viewModel.notificationsEnabled.observe(viewLifecycleOwner) { enabled ->

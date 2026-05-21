@@ -39,6 +39,10 @@ class EpisodesActivity : AppCompatActivity() {
         binding.toolbar.title = getString(R.string.season_number, seasonNumber)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
+        // One-shot read; toggling the pref takes effect on next open.
+        val hideUnwatched = kotlinx.coroutines.runBlocking {
+            viewModel.hideUnwatchedEpisodeInfo()
+        }
         adapter = EpisodesAdapter(
             scope = lifecycleScope,
             titleFor = { epNum, ep ->
@@ -48,7 +52,9 @@ class EpisodesActivity : AppCompatActivity() {
                     ep.title.ifBlank { getString(R.string.episode_fallback_name, epNum) }
                 )
             },
+            hiddenTitleFor = { epNum -> getString(R.string.episode_hidden_title, epNum) },
             loadingText = getString(R.string.loading),
+            hideUnwatchedInfo = hideUnwatched,
             detailProvider = { epNum -> episodeDetailLine(epNum) },
             onWatchedToggled = { epNum, watched ->
                 viewModel.setEpisodeWatched(epNum, watched)
