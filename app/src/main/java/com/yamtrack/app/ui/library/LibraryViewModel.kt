@@ -40,6 +40,10 @@ class LibraryViewModel @Inject constructor(
     private var currentStatus: MediaStatus? = null   // null == ALL
     private var currentSort: String = "added_desc"   // newest-first by default
 
+    /** Active page-fetch coroutine. Cancelled when filters change so a
+     *  slow previous load can't overwrite a newer one. */
+    private var loadJob: kotlinx.coroutines.Job? = null
+
     init {
         viewModelScope.launch {
             val saved = preferencesManager.defaultMediaType.first()
@@ -80,9 +84,18 @@ class LibraryViewModel @Inject constructor(
     }
 
     private fun loadMedia() {
-        viewModelScope.launch {
+        // Cancel any in-flight previous load — switching tabs/filters fast
+        // would otherwise let an older fetch overwrite the newer one.
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _isLoading.value = true
             _mediaList.value = Result.Loading
+
+            // Snapshot the request key so we can ignore the result if the
+            // user changed filters again while we were paging.
+            val requestType = currentMediaType
+            val requestStatus = currentStatus
+            val requestSort = currentSort
 
             // The API caps a single page at MAX_RESULT_LIMIT (200), so a
             // flat limit silently truncates large libraries. Page through
@@ -93,9 +106,9 @@ class LibraryViewModel @Inject constructor(
             var error: Result.Error? = null
             while (true) {
                 val page = repository.getMediaByType(
-                    mediaType = currentMediaType,
-                    status = currentStatus,
-                    sort = currentSort,
+                    mediaType = requestType,
+                    status = requestStatus,
+                    sort = requestSort,
                     limit = pageSize,
                     offset = offset
                 )
@@ -111,6 +124,16 @@ class LibraryViewModel @Inject constructor(
                     }
                     is Result.Loading -> break
                 }
+            }
+
+            // Belt-and-suspenders: if the user changed filters after we
+            // already started paging, drop this result so the UI keeps
+            // whatever the newer load produces.
+            if (requestType != currentMediaType ||
+                requestStatus != currentStatus ||
+                requestSort != currentSort
+            ) {
+                return@launch
             }
 
             _mediaList.value = when {
