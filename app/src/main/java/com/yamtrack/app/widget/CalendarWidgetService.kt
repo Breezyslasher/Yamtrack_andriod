@@ -73,6 +73,10 @@ private class CalendarRemoteViewsFactory(
     private val dayFmt = SimpleDateFormat("d", Locale.getDefault())
     private val monthFmt = SimpleDateFormat("MMM", Locale.getDefault())
 
+    /** Poster bitmaps, keyed by URL — survives across getViewAt calls so
+     *  scrolling doesn't re-download anything. */
+    private val bitmapCache = java.util.concurrent.ConcurrentHashMap<String, Bitmap>()
+
     private val entryPoint: CalendarWidgetService.WidgetEntryPoint by lazy {
         EntryPointAccessors.fromApplication(
             context,
@@ -101,8 +105,25 @@ private class CalendarRemoteViewsFactory(
         events.clear()
         events += loadFromCache()
 
+        // Warm the bitmap cache in the background for the rows we already
+        // have so the first scroll doesn't re-download anything.
+        events.forEach { ev ->
+            val url = ev.image?.takeIf { it.isNotBlank() } ?: return@forEach
+            if (bitmapCache.containsKey(url)) return@forEach
+            widgetScope.launch {
+                loadBitmap(url)?.let { bitmapCache[url] = it }
+            }
+        }
+
         widgetScope.launch {
             val fresh = fetchEvents() ?: return@launch
+            // Pre-warm any new posters too.
+            fresh.forEach { ev ->
+                val url = ev.image?.takeIf { it.isNotBlank() } ?: return@forEach
+                if (!bitmapCache.containsKey(url)) {
+                    loadBitmap(url)?.let { bitmapCache[url] = it }
+                }
+            }
             val freshJson = cacheAdapter.toJson(fresh)
             val cachedJson = cachePrefs.getString(KEY_EVENTS, null)
             if (freshJson == cachedJson) return@launch
@@ -191,7 +212,8 @@ private class CalendarRemoteViewsFactory(
         views.setTextViewText(R.id.widgetItemTitle, event.title.ifBlank { "—" })
         views.setTextViewText(R.id.widgetItemDetail, buildDetailLine(event))
 
-        val bitmap = event.image?.takeIf { it.isNotBlank() }?.let { loadBitmap(it) }
+        val url = event.image?.takeIf { it.isNotBlank() }
+        val bitmap = url?.let { bitmapCache[it] ?: loadBitmap(it)?.also { b -> bitmapCache[it] = b } }
         if (bitmap != null) {
             views.setImageViewBitmap(R.id.widgetItemPoster, bitmap)
         } else {
@@ -242,7 +264,16 @@ private class CalendarRemoteViewsFactory(
         return parts.joinToString(" · ")
     }
 
-    override fun getLoadingView(): RemoteViews? = null
+    /** Return a blank version of our row instead of the framework default
+     *  ("Loading…") so scrolling doesn't flash that placeholder text. */
+    override fun getLoadingView(): RemoteViews =
+        RemoteViews(context.packageName, R.layout.widget_calendar_item).apply {
+            setTextViewText(R.id.widgetItemDay, "")
+            setTextViewText(R.id.widgetItemMonth, "")
+            setTextViewText(R.id.widgetItemTitle, "")
+            setTextViewText(R.id.widgetItemDetail, "")
+            setImageViewResource(R.id.widgetItemPoster, R.drawable.placeholder_poster)
+        }
     override fun getViewTypeCount(): Int = 1
     override fun getItemId(position: Int): Long = events[position].id ?: position.toLong()
     override fun hasStableIds(): Boolean = true
