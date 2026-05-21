@@ -3,6 +3,7 @@ package com.yamtrack.app.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
@@ -33,7 +34,7 @@ class CalendarWidgetProvider : AppWidgetProvider() {
             views.setRemoteAdapter(R.id.widgetList, intent)
             views.setEmptyView(R.id.widgetList, R.id.widgetEmpty)
 
-            // Tapping the title bar opens the app on the calendar tab.
+            // Tapping the title opens the app on the calendar tab.
             val openIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
@@ -42,7 +43,20 @@ class CalendarWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
             views.setOnClickPendingIntent(R.id.widgetTitle, openPending)
-            views.setOnClickPendingIntent(R.id.widgetRefresh, openPending)
+
+            // Tapping the arrow refreshes this widget's data. Broadcast to
+            // ourselves with a unique URI so PendingIntents stay distinct
+            // across multiple widget instances.
+            val refreshIntent = Intent(context, CalendarWidgetProvider::class.java).apply {
+                action = ACTION_REFRESH
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                data = android.net.Uri.parse("yamtrack-refresh://widget/$id")
+            }
+            val refreshPending = PendingIntent.getBroadcast(
+                context, id, refreshIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            views.setOnClickPendingIntent(R.id.widgetRefresh, refreshPending)
 
             // Per-row click template — the factory fills in the media extras
             // per row. Routed through SplashActivity so the auth/token is
@@ -59,12 +73,40 @@ class CalendarWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (intent.action != ACTION_REFRESH) return
+
+        // Invalidate the on-disk events cache so the next onDataSetChanged
+        // path goes straight to the network (no stale render).
+        context.getSharedPreferences("widget_calendar_cache", Context.MODE_PRIVATE)
+            .edit().remove("events_json").apply()
+
+        val mgr = AppWidgetManager.getInstance(context)
+        val targeted = intent.getIntExtra(
+            AppWidgetManager.EXTRA_APPWIDGET_ID,
+            AppWidgetManager.INVALID_APPWIDGET_ID
+        )
+        val ids = if (targeted != AppWidgetManager.INVALID_APPWIDGET_ID) {
+            intArrayOf(targeted)
+        } else {
+            mgr.getAppWidgetIds(
+                ComponentName(context, CalendarWidgetProvider::class.java)
+            )
+        }
+        if (ids.isNotEmpty()) {
+            mgr.notifyAppWidgetViewDataChanged(ids, R.id.widgetList)
+        }
+    }
+
     companion object {
+        const val ACTION_REFRESH = "com.yamtrack.app.widget.ACTION_REFRESH"
+
         /** Force a refresh from anywhere in the app (e.g. after sign-in). */
         fun requestRefresh(context: Context) {
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(
-                android.content.ComponentName(context, CalendarWidgetProvider::class.java)
+                ComponentName(context, CalendarWidgetProvider::class.java)
             )
             if (ids.isNotEmpty()) {
                 mgr.notifyAppWidgetViewDataChanged(ids, R.id.widgetList)
