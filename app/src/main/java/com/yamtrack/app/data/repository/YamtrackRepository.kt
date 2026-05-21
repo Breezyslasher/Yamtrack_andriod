@@ -280,6 +280,12 @@ class YamtrackRepository @Inject constructor(
      *                already tracked the server replies 409, so fall back
      *                to PATCH-ing the end_date instead.
      *  - unwatched -> DELETE the episode tracking.
+     *
+     * Note: the server's POST /media/episode/ has a known bug where it
+     * doesn't forward `episode_number` to services.get_media_metadata for
+     * provider sources, which surfaces as a 500 with detail
+     * "Internal Server Error." We translate that into a clearer message
+     * so the toast isn't misleading.
      */
     suspend fun setEpisodeWatched(
         source: String,
@@ -312,7 +318,13 @@ class YamtrackRepository @Inject constructor(
                 }
             }
         }
-        return (created as? Result.Error) ?: Result.Error("Unknown error")
+        val err = created as? Result.Error ?: return Result.Error("Unknown error")
+        // Translate the known server-side episode-POST bug into a useful
+        // toast instead of the raw "Internal Server Error." detail.
+        val friendly = if (err.code == 500) {
+            "This server build can't track new episodes yet (server bug in POST /media/episode/)."
+        } else err.message
+        return Result.Error(friendly, err.code)
     }
 
     // ===================== Search =====================
