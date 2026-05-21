@@ -16,8 +16,8 @@ android {
         // Single source of truth for the app version. Bump these per
         // release (CI no longer rewrites them). versionCode must not
         // decrease or installs will refuse to downgrade.
-        versionCode 1
-        versionName "Beta 0.0.3"
+        versionCode 2
+        versionName "Beta 0.0.4"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

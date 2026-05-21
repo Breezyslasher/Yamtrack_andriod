@@ -22,7 +22,9 @@ import kotlinx.coroutines.launch
 class EpisodesAdapter(
     private val scope: LifecycleCoroutineScope,
     private val titleFor: (Int, MediaItem) -> String,
+    private val hiddenTitleFor: (Int) -> String,
     private val loadingText: String,
+    private val hideUnwatchedInfo: Boolean,
     private val detailProvider: suspend (Int) -> String?,
     private val onWatchedToggled: (episodeNumber: Int, watched: Boolean) -> Unit
 ) : ListAdapter<MediaItem, EpisodesAdapter.VH>(Diff()) {
@@ -44,11 +46,12 @@ class EpisodesAdapter(
 
         fun bind(ep: MediaItem) {
             val epNum = ep.item?.episodeNumber ?: 0
-            binding.tvTitle.text = titleFor(epNum, ep)
+            val hide = hideUnwatchedInfo && !ep.tracked
+
+            binding.tvTitle.text =
+                if (hide) hiddenTitleFor(epNum) else titleFor(epNum, ep)
             binding.ivThumb.contentDescription = binding.tvTitle.text
 
-            // Detach the listener before syncing checked state so a recycled
-            // row doesn't fire a spurious toggle.
             binding.cbWatched.setOnCheckedChangeListener(null)
             binding.cbWatched.isChecked = ep.tracked
             binding.cbWatched.setOnCheckedChangeListener { _, isChecked ->
@@ -56,7 +59,7 @@ class EpisodesAdapter(
             }
 
             val image = ep.image
-            if (!image.isNullOrBlank()) {
+            if (!hide && !image.isNullOrBlank()) {
                 binding.ivThumb.load(image) {
                     crossfade(true)
                     placeholder(R.drawable.placeholder_poster)
@@ -65,6 +68,12 @@ class EpisodesAdapter(
                 }
             } else {
                 binding.ivThumb.setImageResource(R.drawable.placeholder_poster)
+            }
+
+            if (hide) {
+                // Spoiler shield: don't load or render the rich detail line.
+                binding.tvDetail.visibility = View.GONE
+                return
             }
 
             val cached = detailCache[epNum]

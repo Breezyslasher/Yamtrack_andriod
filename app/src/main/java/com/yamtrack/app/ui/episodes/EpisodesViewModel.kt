@@ -7,16 +7,22 @@ import androidx.lifecycle.viewModelScope
 import com.yamtrack.app.data.model.MediaDetails
 import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.repository.PreferencesManager
 import com.yamtrack.app.data.repository.YamtrackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /** Lists a season's episodes, their metadata, and watched state. */
 @HiltViewModel
 class EpisodesViewModel @Inject constructor(
-    private val repository: YamtrackRepository
+    private val repository: YamtrackRepository,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
+
+    suspend fun hideUnwatchedEpisodeInfo(): Boolean =
+        preferencesManager.hideUnwatchedEpisodeInfo.first()
 
     private val _episodes = MutableLiveData<Result<List<MediaItem>>>()
     val episodes: LiveData<Result<List<MediaItem>>> = _episodes

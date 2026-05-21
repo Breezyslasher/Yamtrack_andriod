@@ -81,6 +81,9 @@
     <string name="episode_fallback_name">Episode %1$d</string>
     <string name="episodes_empty">No episodes found.</string>
     <string name="episode_watched_toggle">Mark episode watched</string>
+    <string name="hide_unwatched_episode_info">Spoiler-free unwatched episodes</string>
+    <string name="hide_unwatched_episode_info_summary">Hide title, description and thumbnail until watched</string>
+    <string name="episode_hidden_title">Episode %1$d</string>
 
     <!-- Dialogs / toasts -->
     <string name="updated">Updated</string>

@@ -25,6 +25,9 @@ class SettingsViewModel @Inject constructor(
     private val _notificationsEnabled = MutableLiveData<Boolean>()
     val notificationsEnabled: LiveData<Boolean> = _notificationsEnabled
 
+    private val _hideUnwatchedEpisodeInfo = MutableLiveData<Boolean>()
+    val hideUnwatchedEpisodeInfo: LiveData<Boolean> = _hideUnwatchedEpisodeInfo
+
     private val _logoutComplete = MutableLiveData<Boolean>()
     val logoutComplete: LiveData<Boolean> = _logoutComplete
 
@@ -41,6 +44,8 @@ class SettingsViewModel @Inject constructor(
             _serverUrl.value = preferencesManager.serverUrl.first()
             _showAdultContent.value = preferencesManager.showAdultContent.first()
             _notificationsEnabled.value = preferencesManager.notificationsEnabled.first()
+            _hideUnwatchedEpisodeInfo.value =
+                preferencesManager.hideUnwatchedEpisodeInfo.first()
         }
     }
 
@@ -76,6 +81,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             preferencesManager.setShowAdultContent(show)
             _showAdultContent.value = show
+        }
+    }
+
+    fun setHideUnwatchedEpisodeInfo(hide: Boolean) {
+        viewModelScope.launch {
+            preferencesManager.setHideUnwatchedEpisodeInfo(hide)
+            _hideUnwatchedEpisodeInfo.value = hide
         }
     }
 
