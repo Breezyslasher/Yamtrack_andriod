@@ -16,6 +16,7 @@ import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.model.UserStats
 import com.yamtrack.app.databinding.DialogStatsBinding
 import com.yamtrack.app.databinding.FragmentSettingsBinding
+import com.yamtrack.app.ui.lists.ListsActivity
 import com.yamtrack.app.ui.login.LoginActivity
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -64,6 +65,9 @@ class SettingsFragment : Fragment() {
 
         // Stats
         binding.layoutStats.setOnClickListener { showStatsDialog() }
+        binding.layoutLists.setOnClickListener {
+            startActivity(Intent(requireContext(), ListsActivity::class.java))
+        }
 
         // Logout
         binding.btnLogout.setOnClickListener { showLogoutConfirmation() }

@@ -383,6 +383,40 @@ class YamtrackRepository @Inject constructor(
         api.getListDetails(listId)
     }
 
+    suspend fun createList(
+        name: String,
+        description: String? = null
+    ): Result<CustomList> = apiCall {
+        api.createList(
+            CreateListRequest(
+                name = name.trim(),
+                description = description?.takeIf { it.isNotBlank() }
+            )
+        )
+    }
+
+    suspend fun deleteList(listId: Long): Result<Unit> = apiCall {
+        api.deleteList(listId)
+    }
+
+    suspend fun addMediaToList(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        listId: Long
+    ): Result<Unit> = apiCall {
+        api.addMediaToList(mediaType.value, source, mediaId, listId)
+    }
+
+    suspend fun removeMediaFromList(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        listId: Long
+    ): Result<Unit> = apiCall {
+        api.removeMediaFromList(mediaType.value, source, mediaId, listId)
+    }
+
     // ===================== History =====================
 
     suspend fun getMediaHistory(

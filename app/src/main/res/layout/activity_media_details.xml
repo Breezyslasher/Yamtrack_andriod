@@ -181,13 +181,28 @@
                     android:orientation="horizontal"
                     android:visibility="gone" />
 
+                <!-- Add-to-list Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddToList"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/add_to_list"
+                    android:textAllCaps="false"
+                    android:textColor="@color/primary"
+                    app:cornerRadius="8dp"
+                    app:icon="@drawable/ic_add_circle"
+                    app:iconTint="@color/primary"
+                    app:strokeColor="@color/primary" />
+
                 <!-- Remove Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRemove"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
+                    android:layout_marginTop="8dp"
                     android:text="Remove from Library"
                     android:textAllCaps="false"
                     android:textColor="@color/primary"

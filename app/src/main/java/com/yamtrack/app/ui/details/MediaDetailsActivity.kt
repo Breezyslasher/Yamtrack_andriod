@@ -150,6 +150,51 @@ class MediaDetailsActivity : AppCompatActivity() {
         binding.tvScore.setOnClickListener {
             showScoreDialog()
         }
+        binding.btnAddToList.setOnClickListener {
+            showAddToListDialog()
+        }
+    }
+
+    private fun showAddToListDialog() {
+        val current = (viewModel.details.value as? Result.Success)?.data
+        val tracked = current?.tracked == true
+        if (!tracked) {
+            Toast.makeText(this, R.string.add_to_list_requires_track, Toast.LENGTH_LONG).show()
+            return
+        }
+        val containingIds = current?.lists.orEmpty()
+            .mapNotNull { it.id }.toHashSet()
+
+        androidx.lifecycle.lifecycleScope.launchWhenStarted {
+            val all = viewModel.fetchUserLists()
+            if (all.isEmpty()) {
+                Toast.makeText(
+                    this@MediaDetailsActivity,
+                    R.string.add_to_list_no_lists,
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launchWhenStarted
+            }
+            val names = all.map { it.name }.toTypedArray()
+            val checked = BooleanArray(all.size) { containingIds.contains(all[it].id) }
+            AlertDialog.Builder(this@MediaDetailsActivity)
+                .setTitle(R.string.add_to_list)
+                .setMultiChoiceItems(names, checked) { _, which, isChecked ->
+                    checked[which] = isChecked
+                }
+                .setPositiveButton(R.string.save) { _, _ ->
+                    all.forEachIndexed { i, list ->
+                        val was = containingIds.contains(list.id)
+                        val now = checked[i]
+                        when {
+                            now && !was -> viewModel.addToList(list.id)
+                            !now && was -> viewModel.removeFromList(list.id)
+                        }
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
     }
 
     private fun bindLibraryButton(tracked: Boolean) {

@@ -279,4 +279,32 @@ interface YamtrackApi {
         @Query("limit") limit: Int = 20,
         @Query("offset") offset: Int = 0
     ): Response<CustomList>
+
+    /** POST /api/v1/lists/ — body {name, description?, collaborators?}. */
+    @POST("api/v1/lists/")
+    suspend fun createList(@Body request: CreateListRequest): Response<CustomList>
+
+    /** DELETE /api/v1/lists/{list_id}/ — remove the list entirely. 204. */
+    @DELETE("api/v1/lists/{list_id}/")
+    suspend fun deleteList(@Path("list_id") listId: Long): Response<Unit>
+
+    /** PUT /api/v1/media/{type}/{source}/{media_id}/lists/{list_id}/
+     *  — add the (already-tracked) media to a list. No body. */
+    @PUT("api/v1/media/{media_type}/{source}/{media_id}/lists/{list_id}/")
+    suspend fun addMediaToList(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("list_id") listId: Long
+    ): Response<Unit>
+
+    /** DELETE /api/v1/media/{type}/{source}/{media_id}/lists/{list_id}/
+     *  — remove the media from a list. */
+    @DELETE("api/v1/media/{media_type}/{source}/{media_id}/lists/{list_id}/")
+    suspend fun removeMediaFromList(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("list_id") listId: Long
+    ): Response<Unit>
 }

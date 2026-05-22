@@ -70,6 +70,45 @@ class MediaDetailsViewModel @Inject constructor(
     // Episode-level tracking lives in EpisodesActivity/EpisodesViewModel
     // (via the correct POST /media/episode/ + DELETE endpoints), not here.
 
+    /** Returns all the user's lists. */
+    suspend fun fetchUserLists(): List<com.yamtrack.app.data.model.CustomList> =
+        when (val r = repository.getLists(limit = 100)) {
+            is Result.Success -> r.data
+            else -> emptyList()
+        }
+
+    fun addToList(listId: Long) {
+        viewModelScope.launch {
+            val r = repository.addMediaToList(
+                currentMediaType, currentSource, currentMediaId, listId
+            )
+            _updateResult.value = when (r) {
+                is Result.Success -> {
+                    loadDetails(currentMediaType, currentSource, currentMediaId)
+                    OperationResult.Success
+                }
+                is Result.Error -> OperationResult.Error(r.message)
+                else -> OperationResult.Error("Unknown error")
+            }
+        }
+    }
+
+    fun removeFromList(listId: Long) {
+        viewModelScope.launch {
+            val r = repository.removeMediaFromList(
+                currentMediaType, currentSource, currentMediaId, listId
+            )
+            _updateResult.value = when (r) {
+                is Result.Success -> {
+                    loadDetails(currentMediaType, currentSource, currentMediaId)
+                    OperationResult.Success
+                }
+                is Result.Error -> OperationResult.Error(r.message)
+                else -> OperationResult.Error("Unknown error")
+            }
+        }
+    }
+
     /** Add with default Planning status (used by the explicit button). */
     fun addToLibrary() {
         viewModelScope.launch {
