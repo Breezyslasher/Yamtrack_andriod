@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import coil.transform.RoundedCornersTransformation
@@ -165,7 +166,7 @@ class MediaDetailsActivity : AppCompatActivity() {
         val containingIds = current?.lists.orEmpty()
             .mapNotNull { it.id }.toHashSet()
 
-        androidx.lifecycle.lifecycleScope.launchWhenStarted {
+        lifecycleScope.launchWhenStarted {
             val all = viewModel.fetchUserLists()
             if (all.isEmpty()) {
                 Toast.makeText(
