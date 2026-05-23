@@ -27,6 +27,29 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Custom-scheme deep links: yamtrack://media/<type>/<src>/<id>[/<season>[/<ep>]]
+                 and yamtrack://lists/<id>. Works from any source (QR code,
+                 shortcut, server email, etc.) regardless of which host the
+                 user's Yamtrack server is on. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="yamtrack" />
+            </intent-filter>
+
+            <!-- https deep links into the default Yamtrack instance. Users
+                 with a different host can add their own <data> entries. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="yamtrack.fuzzygrim.com" />
+                <data android:pathPrefix="/media" />
+                <data android:pathPrefix="/lists" />
+            </intent-filter>
         </activity>
 
         <activity

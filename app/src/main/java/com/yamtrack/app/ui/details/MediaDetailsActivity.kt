@@ -37,6 +37,7 @@ class MediaDetailsActivity : AppCompatActivity() {
         const val EXTRA_MEDIA_TYPE = "media_type"
         const val EXTRA_SOURCE = "source"
         const val EXTRA_MEDIA_ID = "media_id"
+        private const val MENU_ADD_TO_LIST = 1
     }
 
     private lateinit var binding: ActivityMediaDetailsBinding
@@ -151,8 +152,20 @@ class MediaDetailsActivity : AppCompatActivity() {
         binding.tvScore.setOnClickListener {
             showScoreDialog()
         }
-        binding.btnAddToList.setOnClickListener {
-            showAddToListDialog()
+        // Long-press the poster to bring up media actions (Add to list).
+        // Cover/image change isn't an API-supported action, so it's omitted.
+        binding.ivPoster.isLongClickable = true
+        binding.ivPoster.setOnLongClickListener { anchor ->
+            android.widget.PopupMenu(this, anchor).apply {
+                menu.add(0, MENU_ADD_TO_LIST, 0, R.string.add_to_list)
+                setOnMenuItemClickListener { item ->
+                    if (item.itemId == MENU_ADD_TO_LIST) {
+                        showAddToListDialog(); true
+                    } else false
+                }
+                show()
+            }
+            true
         }
     }
 
