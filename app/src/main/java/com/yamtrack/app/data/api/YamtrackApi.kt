@@ -192,12 +192,6 @@ interface YamtrackApi {
         @Body request: UpdateMediaRequest
     ): Response<MediaDetails>
 
-    /** Track (mark watched) an episode. media_type path is literally "episode". */
-    @POST("api/v1/media/episode/")
-    suspend fun trackEpisode(
-        @Body request: TrackEpisodeRequest
-    ): Response<MediaDetails>
-
     /** Untrack (mark unwatched) an episode. */
     @DELETE("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/{episode_number}/")
     suspend fun deleteEpisode(

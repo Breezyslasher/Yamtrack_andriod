@@ -276,16 +276,19 @@ class YamtrackRepository @Inject constructor(
 
     /**
      * Mark an episode watched/unwatched.
-     *  - watched  -> POST /media/episode/ with today's end_date. If it's
-     *                already tracked the server replies 409, so fall back
-     *                to PATCH-ing the end_date instead.
-     *  - unwatched -> DELETE the episode tracking.
      *
-     * Note: the server's POST /media/episode/ has a known bug where it
-     * doesn't forward `episode_number` to services.get_media_metadata for
-     * provider sources, which surfaces as a 500 with detail
-     * "Internal Server Error." We translate that into a clearer message
-     * so the toast isn't misleading.
+     * Per the API PR author (FuzzyGrim/Yamtrack#924, 66Bunz May-2026),
+     * episodes are NOT a top-level resource — they live as children of
+     * the parent tv serie at
+     * `/api/v1/media/tv/{source}/{id}/{season}/{episode}/`. There is no
+     * POST endpoint for creating a brand-new episode tracking via the
+     * REST API yet; only PATCH/DELETE on existing ones are exposed.
+     *
+     *  - watched  -> PATCH end_date = today on the child url.
+     *                If the episode has never been tracked the server
+     *                replies 404; surfaced as a clear message because
+     *                there's no client-side way to create one yet.
+     *  - unwatched -> DELETE the episode tracking.
      */
     suspend fun setEpisodeWatched(
         source: String,
@@ -299,32 +302,22 @@ class YamtrackRepository @Inject constructor(
         }
         val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
             .format(java.util.Date())
-        val created = apiCall {
-            api.trackEpisode(
-                TrackEpisodeRequest(mediaId, source, seasonNumber, episodeNumber, today)
-            )
-        }
-        if (created is Result.Success) return Result.Success(Unit)
-        if (created is Result.Error && created.code == 409) {
-            // Already tracked — just refresh its watch date.
-            return updateEpisode(
-                source, mediaId, seasonNumber, episodeNumber,
-                UpdateMediaRequest(endDate = today)
-            ).let {
-                when (it) {
-                    is Result.Success -> Result.Success(Unit)
-                    is Result.Error -> it
-                    else -> Result.Error("Unknown error")
-                }
+        val r = updateEpisode(
+            source, mediaId, seasonNumber, episodeNumber,
+            UpdateMediaRequest(endDate = today)
+        )
+        return when (r) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> {
+                val friendly = if (r.code == 404) {
+                    "This episode hasn't been tracked yet, and the API can't " +
+                        "create new episode trackings — mark it watched on the " +
+                        "Yamtrack web UI first, then it'll toggle here."
+                } else r.message
+                Result.Error(friendly, r.code)
             }
+            else -> Result.Error("Unknown error")
         }
-        val err = created as? Result.Error ?: return Result.Error("Unknown error")
-        // Translate the known server-side episode-POST bug into a useful
-        // toast instead of the raw "Internal Server Error." detail.
-        val friendly = if (err.code == 500) {
-            "This server build can't track new episodes yet (server bug in POST /media/episode/)."
-        } else err.message
-        return Result.Error(friendly, err.code)
     }
 
     // ===================== Search =====================

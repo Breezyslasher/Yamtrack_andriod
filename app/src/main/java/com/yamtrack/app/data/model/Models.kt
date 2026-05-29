@@ -527,19 +527,6 @@ data class CreateListRequest(
 )
 
 /**
- * Body for POST /api/v1/media/episode/ — the only way to *track* (mark
- * watched) an episode. The server's EpisodeForm exposes just end_date,
- * so an episode is simply a watched record with an optional watch date.
- */
-data class TrackEpisodeRequest(
-    @Json(name = "media_id") val mediaId: String,
-    @Json(name = "source") val source: String,
-    @Json(name = "season_number") val seasonNumber: Int,
-    @Json(name = "episode_number") val episodeNumber: Int,
-    @Json(name = "end_date") val endDate: String? = null
-)
-
-/**
  * Auth result for testConnection() and login flows.
  */
 sealed class AuthResult {
