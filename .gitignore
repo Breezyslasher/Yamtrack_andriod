@@ -13,7 +13,10 @@ captures/
 *.log
 .DS_Store
 
-# Signing — never commit the keystore or its passwords
+# Signing — never commit the release keystore or its passwords.
+# The debug keystore IS committed (well-known credentials) so every
+# build signs debug APKs with the same cert and update-in-place works.
 keystore.properties
 *.jks
 *.keystore
+!app/debug.keystore
