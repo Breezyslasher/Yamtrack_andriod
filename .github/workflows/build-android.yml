@@ -15,6 +15,10 @@ on:
         options:
           - debug
           - release
+      prerelease:
+        description: Publish build as a GitHub prerelease (uses app versionName)
+        type: boolean
+        default: false
 
 jobs:
   # ───────────────────────────────────────────────
@@ -120,5 +124,51 @@ jobs:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
           draft: true
+          files: |
+            dist/Yamtrack-android-*/**/*.apk
+
+  # ───────────────────────────────────────────────
+  # Manual prerelease: when the workflow is dispatched with
+  # `prerelease=true`, publish the freshly-built APK(s) as a
+  # GitHub prerelease named after the app's versionName.
+  # ───────────────────────────────────────────────
+  upload-prerelease:
+    name: Prerelease
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.prerelease == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read versionName from app/build.gradle
+        id: version
+        run: |
+          version_name=$(grep -E '^[[:space:]]*versionName[[:space:]]+' app/build.gradle \
+            | head -n1 \
+            | sed -E 's/.*versionName[[:space:]]+"([^"]+)".*/\1/')
+          if [ -z "$version_name" ]; then
+            echo "Could not parse versionName from app/build.gradle" >&2
+            exit 1
+          fi
+          # Tag-safe slug (spaces -> dots) so e.g. "Beta 0.0.4" -> "v-Beta.0.0.4"
+          tag_slug=$(echo "$version_name" | tr ' ' '.')
+          echo "name=$version_name" >> "$GITHUB_OUTPUT"
+          echo "tag=v-$tag_slug-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Download APK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Publish prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          generate_release_notes: true
           files: |
             dist/Yamtrack-android-*/**/*.apk
