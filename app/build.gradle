@@ -58,6 +58,21 @@ android {
         hasSharedSigning = true
     }
 
+    // Override AGP's default debug signing config to use a committed
+    // keystore at app/debug.keystore (well-known credentials). Without
+    // this, every machine — and every CI runner — generates a fresh
+    // ~/.android/debug.keystore, so debug APKs from different builds
+    // have different signing certs and Android refuses to update over
+    // them with "App not installed".
+    signingConfigs {
+        debug {
+            storeFile file("debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
+
     buildTypes {
         release {
             // R8 full mode strips generic signatures and breaks Gson/
@@ -77,9 +92,10 @@ android {
         debug {
             minifyEnabled false
             debuggable true
-            if (hasSharedSigning) {
-                signingConfig signingConfigs.shared
-            }
+            // Always use the committed debug keystore (configured above)
+            // so debug APKs from local builds and CI runs share the same
+            // signing cert and can update over each other.
+            signingConfig signingConfigs.debug
             // Distinct package + label so a debug build installs alongside
             // a release build instead of replacing it.
             applicationIdSuffix ".debug"
