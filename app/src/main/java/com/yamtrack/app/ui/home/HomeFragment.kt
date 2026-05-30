@@ -81,9 +81,10 @@ class HomeFragment : Fragment() {
             val sectionBinding = SectionMediaGroupBinding.inflate(inflater, container, false)
             sectionBinding.tvSectionTitle.text = type.displayName
 
-            val adapter = MediaAdapter(fixedItemWidthPx = cardWidthPx) { item ->
-                openDetails(item)
-            }
+            val adapter = MediaAdapter(
+                fixedItemWidthPx = cardWidthPx,
+                onItemClick = { item -> openDetails(item) }
+            )
             sectionBinding.rvSection.apply {
                 layoutManager = LinearLayoutManager(
                     context, LinearLayoutManager.HORIZONTAL, false

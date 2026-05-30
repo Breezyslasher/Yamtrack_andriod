@@ -5,12 +5,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.PopupMenu
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import android.widget.PopupMenu
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.chip.Chip
 import com.yamtrack.app.R
+import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
@@ -18,6 +22,7 @@ import com.yamtrack.app.databinding.FragmentLibraryBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import com.yamtrack.app.ui.home.MediaAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class LibraryFragment : Fragment() {
@@ -83,19 +88,61 @@ class LibraryFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        mediaAdapter = MediaAdapter { mediaItem ->
-            val type = mediaItem.mediaType ?: return@MediaAdapter
-            val intent = Intent(requireContext(), MediaDetailsActivity::class.java).apply {
-                putExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE, type.value)
-                putExtra(MediaDetailsActivity.EXTRA_SOURCE, mediaItem.source)
-                putExtra(MediaDetailsActivity.EXTRA_MEDIA_ID, mediaItem.mediaId)
-            }
-            startActivity(intent)
-        }
+        mediaAdapter = MediaAdapter(
+            fixedItemWidthPx = null,
+            onItemClick = { mediaItem ->
+                val type = mediaItem.mediaType ?: return@MediaAdapter
+                val intent = Intent(requireContext(), MediaDetailsActivity::class.java).apply {
+                    putExtra(MediaDetailsActivity.EXTRA_MEDIA_TYPE, type.value)
+                    putExtra(MediaDetailsActivity.EXTRA_SOURCE, mediaItem.source)
+                    putExtra(MediaDetailsActivity.EXTRA_MEDIA_ID, mediaItem.mediaId)
+                }
+                startActivity(intent)
+            },
+            onItemLongClick = { mediaItem -> showListsDialog(mediaItem) }
+        )
 
         binding.rvMedia.apply {
             layoutManager = GridLayoutManager(context, 3)
             adapter = mediaAdapter
+        }
+    }
+
+    /** Long-press on a library tile -> choose which user lists this item
+     *  belongs to. Pre-checks the lists from item.lists, diffs on Save. */
+    private fun showListsDialog(item: MediaItem) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val lists = viewModel.fetchUserLists()
+            if (lists.isEmpty()) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.add_to_list_no_lists),
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+            val names = lists.map { it.name }.toTypedArray()
+            val memberIds = item.lists?.mapNotNull { it.id }?.toSet().orEmpty()
+            val checked = BooleanArray(lists.size) { i -> lists[i].id in memberIds }
+            val initial = checked.copyOf()
+
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.add_to_list)
+                .setMultiChoiceItems(names, checked) { _, which, isChecked ->
+                    checked[which] = isChecked
+                }
+                .setPositiveButton(R.string.save) { _, _ ->
+                    val toAdd = mutableListOf<Long>()
+                    val toRemove = mutableListOf<Long>()
+                    for (i in lists.indices) {
+                        if (checked[i] && !initial[i]) toAdd += lists[i].id
+                        else if (!checked[i] && initial[i]) toRemove += lists[i].id
+                    }
+                    if (toAdd.isEmpty() && toRemove.isEmpty()) return@setPositiveButton
+                    viewModel.applyListChanges(item, toAdd, toRemove)
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
         }
     }
 
@@ -177,6 +224,13 @@ class LibraryFragment : Fragment() {
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.swipeRefresh.isRefreshing = isLoading
+        }
+
+        viewModel.toast.observe(viewLifecycleOwner) { message ->
+            if (!message.isNullOrBlank()) {
+                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                viewModel.clearToast()
+            }
         }
     }
 

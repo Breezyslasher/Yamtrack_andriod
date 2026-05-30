@@ -515,16 +515,15 @@ data class UpdateMediaRequest(
 )
 
 /**
- * Body for POST /api/v1/media/episode/ — the only way to *track* (mark
- * watched) an episode. The server's EpisodeForm exposes just end_date,
- * so an episode is simply a watched record with an optional watch date.
+ * Body for POST /api/v1/lists/.
+ *  - name: required, non-empty
+ *  - description: optional free text
+ *  - collaborators: optional list of user IDs
  */
-data class TrackEpisodeRequest(
-    @Json(name = "media_id") val mediaId: String,
-    @Json(name = "source") val source: String,
-    @Json(name = "season_number") val seasonNumber: Int,
-    @Json(name = "episode_number") val episodeNumber: Int,
-    @Json(name = "end_date") val endDate: String? = null
+data class CreateListRequest(
+    @Json(name = "name") val name: String,
+    @Json(name = "description") val description: String? = null,
+    @Json(name = "collaborators") val collaborators: List<Long>? = null
 )
 
 /**

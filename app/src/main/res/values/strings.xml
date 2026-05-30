@@ -85,6 +85,24 @@
     <string name="hide_unwatched_episode_info_summary">Hide title, description and thumbnail until watched</string>
     <string name="episode_hidden_title">Episode %1$d</string>
 
+    <!-- Lists -->
+    <string name="lists">Lists</string>
+    <string name="lists_subtitle">Your custom collections</string>
+    <string name="lists_empty_new">No lists yet. Tap + to create one.</string>
+    <string name="create_list">Create list</string>
+    <string name="list_name_hint">Name</string>
+    <string name="list_description_hint">Description (optional)</string>
+    <string name="list_name_required">Name is required.</string>
+    <string name="delete_list_title">Delete list</string>
+    <string name="delete_list_message">Permanently delete \"%1$s\"?</string>
+    <string name="delete">Delete</string>
+    <string name="list_empty_items">This list is empty.</string>
+    <string name="remove_from_list_title">Remove from list</string>
+    <string name="remove_from_list_message">Remove \"%1$s\" from this list?</string>
+    <string name="add_to_list">Add to list</string>
+    <string name="add_to_list_no_lists">You have no lists. Create one in Settings → Lists.</string>
+    <string name="add_to_list_requires_track">Add this title to your library first.</string>
+
     <!-- Dialogs / toasts -->
     <string name="updated">Updated</string>
     <string name="removed_from_library">Removed from library</string>

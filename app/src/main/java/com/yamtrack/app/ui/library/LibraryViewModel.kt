@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yamtrack.app.data.model.CustomList
 import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.MediaType
@@ -35,6 +36,10 @@ class LibraryViewModel @Inject constructor(
      */
     private val _mediaType = MutableLiveData<MediaType>(MediaType.MOVIE)
     val mediaType: LiveData<MediaType> = _mediaType
+
+    private val _toast = MutableLiveData<String?>()
+    val toast: LiveData<String?> = _toast
+    fun clearToast() { _toast.value = null }
 
     private var currentMediaType: MediaType = MediaType.MOVIE
     private var currentStatus: MediaStatus? = null   // null == ALL
@@ -81,6 +86,44 @@ class LibraryViewModel @Inject constructor(
 
     fun refresh() {
         loadMedia()
+    }
+
+    /** Fetch every custom list the user owns (paged through). */
+    suspend fun fetchUserLists(): List<CustomList> {
+        val all = mutableListOf<CustomList>()
+        val pageSize = 200
+        var offset = 0
+        while (true) {
+            val page = repository.getLists(limit = pageSize, offset = offset)
+            if (page !is Result.Success) break
+            all += page.data
+            if (page.data.size < pageSize) break
+            offset += pageSize
+        }
+        return all
+    }
+
+    /** Apply add/remove diffs for one media item against the user's lists.
+     *  Refreshes the library on completion so `item.lists` reflects truth. */
+    fun applyListChanges(
+        item: MediaItem,
+        toAdd: List<Long>,
+        toRemove: List<Long>
+    ) {
+        val type = item.mediaType ?: return
+        viewModelScope.launch {
+            var failures = 0
+            for (listId in toAdd) {
+                val r = repository.addMediaToList(type, item.source, item.mediaId, listId)
+                if (r is Result.Error) failures++
+            }
+            for (listId in toRemove) {
+                val r = repository.removeMediaFromList(type, item.source, item.mediaId, listId)
+                if (r is Result.Error) failures++
+            }
+            _toast.value = if (failures == 0) "Lists updated" else "Some list changes failed"
+            loadMedia()
+        }
     }
 
     private fun loadMedia() {

@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import coil.transform.RoundedCornersTransformation
@@ -36,6 +37,7 @@ class MediaDetailsActivity : AppCompatActivity() {
         const val EXTRA_MEDIA_TYPE = "media_type"
         const val EXTRA_SOURCE = "source"
         const val EXTRA_MEDIA_ID = "media_id"
+        private const val MENU_ADD_TO_LIST = 1
     }
 
     private lateinit var binding: ActivityMediaDetailsBinding
@@ -149,6 +151,63 @@ class MediaDetailsActivity : AppCompatActivity() {
         // viewModel.tracked observer once details load.
         binding.tvScore.setOnClickListener {
             showScoreDialog()
+        }
+        // Long-press the poster to bring up media actions (Add to list).
+        // Cover/image change isn't an API-supported action, so it's omitted.
+        binding.ivPoster.isLongClickable = true
+        binding.ivPoster.setOnLongClickListener { anchor ->
+            android.widget.PopupMenu(this, anchor).apply {
+                menu.add(0, MENU_ADD_TO_LIST, 0, R.string.add_to_list)
+                setOnMenuItemClickListener { item ->
+                    if (item.itemId == MENU_ADD_TO_LIST) {
+                        showAddToListDialog(); true
+                    } else false
+                }
+                show()
+            }
+            true
+        }
+    }
+
+    private fun showAddToListDialog() {
+        val current = (viewModel.details.value as? Result.Success)?.data
+        val tracked = current?.tracked == true
+        if (!tracked) {
+            Toast.makeText(this, R.string.add_to_list_requires_track, Toast.LENGTH_LONG).show()
+            return
+        }
+        val containingIds = current?.lists.orEmpty()
+            .mapNotNull { it.id }.toHashSet()
+
+        lifecycleScope.launchWhenStarted {
+            val all = viewModel.fetchUserLists()
+            if (all.isEmpty()) {
+                Toast.makeText(
+                    this@MediaDetailsActivity,
+                    R.string.add_to_list_no_lists,
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launchWhenStarted
+            }
+            val names = all.map { it.name }.toTypedArray()
+            val checked = BooleanArray(all.size) { containingIds.contains(all[it].id) }
+            AlertDialog.Builder(this@MediaDetailsActivity)
+                .setTitle(R.string.add_to_list)
+                .setMultiChoiceItems(names, checked) { _, which, isChecked ->
+                    checked[which] = isChecked
+                }
+                .setPositiveButton(R.string.save) { _, _ ->
+                    all.forEachIndexed { i, list ->
+                        val was = containingIds.contains(list.id)
+                        val now = checked[i]
+                        when {
+                            now && !was -> viewModel.addToList(list.id)
+                            !now && was -> viewModel.removeFromList(list.id)
+                        }
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
         }
     }
 

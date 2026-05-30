@@ -20,10 +20,12 @@ class MediaAdapter(
      * so the card fills its grid span.
      */
     private val fixedItemWidthPx: Int? = null,
-    private val onItemClick: (MediaItem) -> Unit
+    private val onItemClick: (MediaItem) -> Unit,
+    /** Optional long-press hook (e.g. library tiles -> Add to list). */
+    private val onItemLongClick: ((MediaItem) -> Unit)? = null
 ) : ListAdapter<MediaItem, MediaAdapter.MediaViewHolder>(MediaDiffCallback()) {
 
-    constructor(onItemClick: (MediaItem) -> Unit) : this(null, onItemClick)
+    constructor(onItemClick: (MediaItem) -> Unit) : this(null, onItemClick, null)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MediaViewHolder {
         val binding = ItemMediaCardBinding.inflate(
@@ -50,6 +52,14 @@ class MediaAdapter(
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onItemClick(getItem(position))
+                }
+            }
+            if (onItemLongClick != null) {
+                binding.root.setOnLongClickListener {
+                    val position = bindingAdapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        onItemLongClick.invoke(getItem(position)); true
+                    } else false
                 }
             }
         }
