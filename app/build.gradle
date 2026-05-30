@@ -66,9 +66,12 @@ android {
             // debug — reliability over a smaller APK.
             minifyEnabled false
             shrinkResources false
-            if (hasSharedSigning) {
-                signingConfig signingConfigs.shared
-            }
+            // Always assign a signing config: an unsigned release APK
+            // fails to install on Android with "App not installed".
+            // Prefer the shared release key when configured; otherwise
+            // fall back to the always-available debug keystore so the
+            // APK is at least signed and installable.
+            signingConfig hasSharedSigning ? signingConfigs.shared : signingConfigs.debug
             resValue "string", "app_name", "Yamtrack"
         }
         debug {
@@ -80,8 +83,23 @@ android {
             // Distinct package + label so a debug build installs alongside
             // a release build instead of replacing it.
             applicationIdSuffix ".debug"
-            versionNameSuffix "-debug"
+            // Append the CI run number when building on GitHub Actions so
+            // successive debug APKs are easy to tell apart in About; falls
+            // back to "-debug" for local builds.
+            def runNumber = System.getenv("GITHUB_RUN_NUMBER")
+            versionNameSuffix runNumber ? ".${runNumber}" : "-debug"
             resValue "string", "app_name", "Yamtrack Debug"
+        }
+    }
+
+    // Rename the release APK so the file itself carries the version,
+    // e.g. Yamtrack.Andriod.Beta-0.0.4.apk. Debug keeps the AGP default.
+    applicationVariants.all { variant ->
+        if (variant.buildType.name == "release") {
+            def slug = variant.versionName.replace(' ', '-')
+            variant.outputs.all { output ->
+                output.outputFileName = "Yamtrack.Andriod.${slug}.apk"
+            }
         }
     }
     
