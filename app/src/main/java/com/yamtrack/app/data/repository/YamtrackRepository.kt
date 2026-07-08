@@ -174,6 +174,15 @@ class YamtrackRepository @Inject constructor(
         progress: Int? = null,
         notes: String? = null
     ): Result<MediaDetails> = apiCall {
+        // MediaForm.Meta.fields (the parent form) includes `progress`, so
+        // for anime / manga / game / book / comic / boardgame the add POST
+        // fails with "Invalid media data. (progress: This field is
+        // required.)" when we leave it null. MovieForm and TvForm override
+        // Meta.fields to drop progress, so those work either way.
+        // Default it from the status: 1 for Completed (matches the
+        // server's own get_progress_from_status), 0 otherwise.
+        val effectiveProgress = progress
+            ?: if (status == MediaStatus.COMPLETED) 1 else 0
         api.addMedia(
             mediaType = mediaType.value,
             request = AddMediaRequest(
@@ -181,7 +190,7 @@ class YamtrackRepository @Inject constructor(
                 source = source,
                 status = status.code,
                 score = score,
-                progress = progress,
+                progress = effectiveProgress,
                 notes = notes
             )
         )

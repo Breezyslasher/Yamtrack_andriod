@@ -479,7 +479,26 @@ data class ApiError(
     @Json(name = "detail") val detail: String? = null,
     @Json(name = "errors") val errors: Any? = null
 ) {
-    fun getErrorMessage(): String = detail ?: "Unknown error"
+    /** Prefer `detail`; if the server also included `errors` (typical for
+     *  form-validation failures on POST /media/…), append it so the user
+     *  sees which field is wrong instead of a bare "Invalid media data.". */
+    fun getErrorMessage(): String {
+        val base = detail ?: "Unknown error"
+        val hints = formatErrors(errors) ?: return base
+        return "$base ($hints)"
+    }
+
+    private fun formatErrors(err: Any?): String? = when (err) {
+        null -> null
+        is String -> err.takeIf { it.isNotBlank() }
+        is List<*> -> err.mapNotNull { formatErrors(it) }
+            .joinToString(", ").ifBlank { null }
+        is Map<*, *> -> err.entries.mapNotNull { (k, v) ->
+            val vs = formatErrors(v) ?: return@mapNotNull null
+            "$k: $vs"
+        }.joinToString(", ").ifBlank { null }
+        else -> err.toString().takeIf { it.isNotBlank() }
+    }
 }
 
 /**
