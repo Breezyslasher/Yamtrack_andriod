@@ -277,18 +277,18 @@ class YamtrackRepository @Inject constructor(
     /**
      * Mark an episode watched/unwatched.
      *
-     *  - unwatched -> DELETE /media/tv/{src}/{id}/{season}/{episode}/
-     *  - watched   -> PATCH  /media/tv/{src}/{id}/{season}/{episode}/  end_date=today
+     * Per the API PR author (FuzzyGrim/Yamtrack#924, 66Bunz May-2026),
+     * episodes are NOT a top-level resource — they live as children of
+     * the parent tv serie at
+     * `/api/v1/media/tv/{source}/{id}/{season}/{episode}/`. There is no
+     * POST endpoint for creating a brand-new episode tracking via the
+     * REST API yet; only PATCH/DELETE on existing ones are exposed.
      *
-     * If the episode has never been tracked, PATCH 404s. There is
-     * *no* working REST path today to create a first-time episode
-     * tracking for provider sources: POST /media/episode/ reaches
-     * MediaTypeListView.post which calls
-     *   services.get_media_metadata("episode", ..., [season_number])
-     * — episode_number is dropped from the identifiers list, so TMDB
-     * throws and the server 500s. Until that upstream bug is fixed,
-     * fall back to a clear error and let the user seed the tracking
-     * from the web UI.
+     *  - watched  -> PATCH end_date = today on the child url.
+     *                If the episode has never been tracked the server
+     *                replies 404; surfaced as a clear message because
+     *                there's no client-side way to create one yet.
+     *  - unwatched -> DELETE the episode tracking.
      */
     suspend fun setEpisodeWatched(
         source: String,
