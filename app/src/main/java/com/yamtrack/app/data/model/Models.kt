@@ -498,12 +498,7 @@ data class AddMediaRequest(
     @Json(name = "progress") val progress: Int? = null,
     @Json(name = "start_date") val startDate: String? = null,
     @Json(name = "end_date") val endDate: String? = null,
-    @Json(name = "notes") val notes: String? = null,
-    // Required by MediaTypeListView.post when media_type is "season" or
-    // "episode" — the view branches on these to wire the new tracking
-    // to its parent (related_season / related_tv).
-    @Json(name = "season_number") val seasonNumber: Int? = null,
-    @Json(name = "episode_number") val episodeNumber: Int? = null
+    @Json(name = "notes") val notes: String? = null
 )
 
 /**
