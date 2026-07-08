@@ -279,14 +279,16 @@ class YamtrackRepository @Inject constructor(
      *
      *  - unwatched -> DELETE /media/tv/{src}/{id}/{season}/{episode}/
      *  - watched   -> PATCH  /media/tv/{src}/{id}/{season}/{episode}/  end_date=today
-     *                 If the episode has never been tracked the PATCH
-     *                 target row doesn't exist, so the server returns
-     *                 404. We fall through to
-     *                 POST /media/episode/ { media_id, source,
-     *                                        season_number, episode_number,
-     *                                        end_date=today }
-     *                 which the general MediaTypeListView.post handles for
-     *                 episode/season media_types (66Bunz feat/add-api).
+     *
+     * If the episode has never been tracked, PATCH 404s. There is
+     * *no* working REST path today to create a first-time episode
+     * tracking for provider sources: POST /media/episode/ reaches
+     * MediaTypeListView.post which calls
+     *   services.get_media_metadata("episode", ..., [season_number])
+     * — episode_number is dropped from the identifiers list, so TMDB
+     * throws and the server 500s. Until that upstream bug is fixed,
+     * fall back to a clear error and let the user seed the tracking
+     * from the web UI.
      */
     suspend fun setEpisodeWatched(
         source: String,
@@ -300,31 +302,20 @@ class YamtrackRepository @Inject constructor(
         }
         val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
             .format(java.util.Date())
-        val patched = updateEpisode(
+        val r = updateEpisode(
             source, mediaId, seasonNumber, episodeNumber,
             UpdateMediaRequest(endDate = today)
         )
-        if (patched is Result.Success) return Result.Success(Unit)
-        val patchErr = patched as? Result.Error ?: return Result.Error("Unknown error")
-        if (patchErr.code != 404) return Result.Error(patchErr.message, patchErr.code)
-
-        // First time this episode is being marked watched — create the
-        // tracking row via the top-level add-media POST.
-        val created = apiCall {
-            api.addMedia(
-                mediaType = MediaType.EPISODE.value,
-                request = AddMediaRequest(
-                    mediaId = mediaId,
-                    source = source,
-                    endDate = today,
-                    seasonNumber = seasonNumber,
-                    episodeNumber = episodeNumber
-                )
-            )
-        }
-        return when (created) {
+        return when (r) {
             is Result.Success -> Result.Success(Unit)
-            is Result.Error -> Result.Error(created.message, created.code)
+            is Result.Error -> {
+                val friendly = if (r.code == 404) {
+                    "This episode hasn't been tracked yet, and the API can't " +
+                        "create new episode trackings — mark it watched on the " +
+                        "Yamtrack web UI first, then it'll toggle here."
+                } else r.message
+                Result.Error(friendly, r.code)
+            }
             else -> Result.Error("Unknown error")
         }
     }
