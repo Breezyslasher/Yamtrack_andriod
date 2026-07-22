@@ -163,6 +163,15 @@ interface YamtrackApi {
         @Body request: UpdateMediaRequest
     ): Response<MediaDetails>
 
+    @POST("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/")
+    suspend fun postSeason(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("season_number") seasonNumber: Int,
+        @Body body: Map<String, String>
+    ): Response<Unit>
+
     @GET("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/episodes/")
     suspend fun getEpisodes(
         @Path("media_type") mediaType: String,
@@ -191,6 +200,16 @@ interface YamtrackApi {
         @Path("episode_number") episodeNumber: Int,
         @Body request: UpdateMediaRequest
     ): Response<MediaDetails>
+
+    @POST("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/{episode_number}/")
+    suspend fun postEpisode(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("season_number") seasonNumber: Int,
+        @Path("episode_number") episodeNumber: Int,
+        @Body body: Map<String, String>
+    ): Response<Unit>
 
     /** Untrack (mark unwatched) an episode. */
     @DELETE("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/{episode_number}/")
