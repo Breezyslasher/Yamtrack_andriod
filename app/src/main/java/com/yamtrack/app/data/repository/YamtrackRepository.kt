@@ -284,20 +284,17 @@ class YamtrackRepository @Inject constructor(
     }
 
     /**
-     * Mark an episode watched/unwatched.
+     * Mark an episode watched/unwatched, cascading up to create the
+     * parent Season / TV tracking rows if the server says they're
+     * missing.
      *
-     * Per the API PR author (FuzzyGrim/Yamtrack#924, 66Bunz May-2026),
-     * episodes are NOT a top-level resource — they live as children of
-     * the parent tv serie at
-     * `/api/v1/media/tv/{source}/{id}/{season}/{episode}/`. There is no
-     * POST endpoint for creating a brand-new episode tracking via the
-     * REST API yet; only PATCH/DELETE on existing ones are exposed.
-     *
-     *  - watched  -> PATCH end_date = today on the child url.
-     *                If the episode has never been tracked the server
-     *                replies 404; surfaced as a clear message because
-     *                there's no client-side way to create one yet.
-     *  - unwatched -> DELETE the episode tracking.
+     *  - unwatched -> DELETE the episode's child url.
+     *  - watched, already tracked -> PATCH end_date = today.
+     *  - watched, not tracked yet -> POST to create the episode.
+     *      If the server replies 400 "Parent season is not tracked
+     *      yet." we POST the season first and retry.
+     *      If the season POST replies 400 "Parent TV serie is not
+     *      tracked yet." we POST the show first and retry both.
      */
     suspend fun setEpisodeWatched(
         source: String,
@@ -311,22 +308,81 @@ class YamtrackRepository @Inject constructor(
         }
         val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
             .format(java.util.Date())
-        val r = updateEpisode(
+        val patched = updateEpisode(
             source, mediaId, seasonNumber, episodeNumber,
             UpdateMediaRequest(endDate = today)
         )
-        return when (r) {
+        if (patched is Result.Success) return Result.Success(Unit)
+        val patchErr = patched as? Result.Error ?: return Result.Error("Unknown error")
+        if (patchErr.code != 404) return Result.Error(patchErr.message, patchErr.code)
+        return ensureEpisodeTracked(source, mediaId, seasonNumber, episodeNumber, today)
+    }
+
+    private suspend fun ensureEpisodeTracked(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int,
+        episodeNumber: Int,
+        isoDate: String
+    ): Result<Unit> {
+        val first = postEpisodeTracking(source, mediaId, seasonNumber, episodeNumber, isoDate)
+        if (first is Result.Success) return Result.Success(Unit)
+        val firstErr = first as? Result.Error ?: return Result.Error("Unknown error")
+        if (firstErr.code != 400 ||
+            !firstErr.message.contains("season is not tracked", ignoreCase = true)) {
+            return Result.Error(firstErr.message, firstErr.code)
+        }
+        val seasonR = ensureSeasonTracked(source, mediaId, seasonNumber)
+        if (seasonR is Result.Error) return Result.Error(seasonR.message, seasonR.code)
+        val retry = postEpisodeTracking(source, mediaId, seasonNumber, episodeNumber, isoDate)
+        return when (retry) {
             is Result.Success -> Result.Success(Unit)
-            is Result.Error -> {
-                val friendly = if (r.code == 404) {
-                    "This episode hasn't been tracked yet, and the API can't " +
-                        "create new episode trackings — mark it watched on the " +
-                        "Yamtrack web UI first, then it'll toggle here."
-                } else r.message
-                Result.Error(friendly, r.code)
-            }
+            is Result.Error -> Result.Error(retry.message, retry.code)
             else -> Result.Error("Unknown error")
         }
+    }
+
+    private suspend fun ensureSeasonTracked(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int
+    ): Result<Unit> {
+        val first = postSeasonTracking(source, mediaId, seasonNumber)
+        if (first is Result.Success) return Result.Success(Unit)
+        val firstErr = first as? Result.Error ?: return Result.Error("Unknown error")
+        if (firstErr.code != 400 ||
+            !firstErr.message.contains("TV serie is not tracked", ignoreCase = true)) {
+            return Result.Error(firstErr.message, firstErr.code)
+        }
+        val tv = addMedia(MediaType.TV, source, mediaId, status = MediaStatus.PLANNING)
+        if (tv is Result.Error) return Result.Error(tv.message, tv.code)
+        val retry = postSeasonTracking(source, mediaId, seasonNumber)
+        return when (retry) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> Result.Error(retry.message, retry.code)
+            else -> Result.Error("Unknown error")
+        }
+    }
+
+    private suspend fun postSeasonTracking(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int
+    ): Result<Unit> = apiCall {
+        api.postSeason(MediaType.TV.value, source, mediaId, seasonNumber, emptyMap())
+    }
+
+    private suspend fun postEpisodeTracking(
+        source: String,
+        mediaId: String,
+        seasonNumber: Int,
+        episodeNumber: Int,
+        isoDate: String
+    ): Result<Unit> = apiCall {
+        api.postEpisode(
+            MediaType.TV.value, source, mediaId, seasonNumber, episodeNumber,
+            mapOf("end_date" to isoDate)
+        )
     }
 
     // ===================== Search =====================
