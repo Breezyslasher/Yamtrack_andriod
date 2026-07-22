@@ -172,6 +172,11 @@ interface YamtrackApi {
         @Body body: Map<String, String>
     ): Response<Unit>
 
+    // Bypass the OkHttp disk cache: each episode's `tracked` state can
+    // change from the web UI, another device, or the cascade in
+    // setEpisodeWatched, and a cached response would make those
+    // changes look like they reverted on next open.
+    @Headers("Cache-Control: no-cache")
     @GET("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/episodes/")
     suspend fun getEpisodes(
         @Path("media_type") mediaType: String,
