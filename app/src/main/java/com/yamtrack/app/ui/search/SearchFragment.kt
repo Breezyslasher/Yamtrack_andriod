@@ -9,14 +9,17 @@ import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.FragmentSearchBinding
+import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SearchFragment : Fragment() {
@@ -25,6 +28,8 @@ class SearchFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: SearchViewModel by viewModels()
+
+    @Inject lateinit var artworkPicker: ArtworkPicker
     private lateinit var searchAdapter: SearchAdapter
 
     override fun onCreateView(
@@ -59,6 +64,16 @@ class SearchFragment : Fragment() {
             },
             onAddClick = { result ->
                 viewModel.addToLibrary(result)
+            },
+            onItemLongClick = { result ->
+                val type = result.type ?: return@SearchAdapter
+                val source = result.source ?: return@SearchAdapter
+                val mediaId = result.mediaId ?: return@SearchAdapter
+                artworkPicker.show(
+                    requireContext(),
+                    viewLifecycleOwner.lifecycleScope,
+                    ArtworkPicker.Target(type, source, mediaId)
+                )
             }
         )
 

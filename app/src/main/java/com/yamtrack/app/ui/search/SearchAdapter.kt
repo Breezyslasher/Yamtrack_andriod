@@ -14,7 +14,8 @@ import com.yamtrack.app.databinding.ItemSearchResultBinding
 
 class SearchAdapter(
     private val onItemClick: (SearchResult) -> Unit,
-    private val onAddClick: (SearchResult) -> Unit
+    private val onAddClick: (SearchResult) -> Unit,
+    private val onItemLongClick: ((SearchResult) -> Unit)? = null
 ) : ListAdapter<SearchResult, SearchAdapter.SearchViewHolder>(SearchDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SearchViewHolder {
@@ -37,6 +38,15 @@ class SearchAdapter(
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onItemClick(getItem(position))
+                }
+            }
+
+            if (onItemLongClick != null) {
+                binding.root.setOnLongClickListener {
+                    val position = bindingAdapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        onItemLongClick.invoke(getItem(position)); true
+                    } else false
                 }
             }
 

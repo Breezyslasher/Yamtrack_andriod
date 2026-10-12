@@ -177,6 +177,7 @@
     <string name="artwork_none">No artwork available for this item.</string>
     <string name="artwork_updated">Artwork updated</string>
     <string name="artwork_reset">Artwork reset</string>
+    <string name="artwork_unsupported">Episodes don\'t have their own artwork.</string>
     <string name="change_season_cover">Change season cover</string>
     <string name="artwork_save_failed">Couldn\'t save artwork: %1$s</string>
 </resources>

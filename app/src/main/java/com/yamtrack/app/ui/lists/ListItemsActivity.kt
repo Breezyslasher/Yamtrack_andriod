@@ -7,19 +7,23 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.yamtrack.app.R
 import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.ActivityListItemsBinding
+import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import com.yamtrack.app.ui.home.MediaAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Displays the items in a single CustomList. Tapping an item opens its
- * detail screen; long-pressing prompts to remove it from the list.
+ * detail screen; long-pressing offers to change its artwork or remove it
+ * from the list.
  */
 @AndroidEntryPoint
 class ListItemsActivity : AppCompatActivity() {
@@ -31,6 +35,8 @@ class ListItemsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityListItemsBinding
     private val viewModel: ListItemsViewModel by viewModels()
+
+    @Inject lateinit var artworkPicker: ArtworkPicker
     private lateinit var adapter: MediaAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,7 +52,8 @@ class ListItemsActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
 
         adapter = MediaAdapter(
-            onItemClick = { item -> openDetails(item) }
+            onItemClick = { item -> openDetails(item) },
+            onItemLongClick = { item -> showItemActions(item) }
         )
         binding.rvItems.layoutManager = GridLayoutManager(this, 3)
         binding.rvItems.adapter = adapter
@@ -60,7 +67,6 @@ class ListItemsActivity : AppCompatActivity() {
                     adapter.submitList(result.data)
                     binding.tvEmpty.visibility =
                         if (result.data.isEmpty()) View.VISIBLE else View.GONE
-                    bindLongPress(result.data)
                 }
                 is Result.Error -> {
                     binding.progressBar.visibility = View.GONE
@@ -94,17 +100,26 @@ class ListItemsActivity : AppCompatActivity() {
         })
     }
 
-    /** MediaAdapter doesn't expose a long-press callback, so attach one
-     *  via the RecyclerView after each rebind. */
-    private fun bindLongPress(items: List<MediaItem>) {
-        binding.rvItems.post {
-            for (i in items.indices) {
-                val vh = binding.rvItems.findViewHolderForAdapterPosition(i) ?: continue
-                vh.itemView.setOnLongClickListener {
-                    confirmRemove(items[i]); true
+    /** Long-press -> change the item's artwork or remove it from the list. */
+    private fun showItemActions(item: MediaItem) {
+        val target = ArtworkPicker.Target.of(item)
+        if (target == null) {
+            confirmRemove(item)
+            return
+        }
+        val actions = arrayOf(
+            getString(R.string.change_artwork),
+            getString(R.string.remove_from_list_title)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(item.title.ifBlank { null })
+            .setItems(actions) { _, which ->
+                when (which) {
+                    0 -> artworkPicker.show(this, lifecycleScope, target)
+                    1 -> confirmRemove(item)
                 }
             }
-        }
+            .show()
     }
 
     private fun confirmRemove(item: MediaItem) {

@@ -11,7 +11,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
@@ -20,7 +19,6 @@ import com.google.android.material.chip.Chip
 import com.yamtrack.app.R
 import com.yamtrack.app.data.model.CastMember
 import com.yamtrack.app.data.model.MediaDetails
-import com.yamtrack.app.data.model.MediaImage
 import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.MediaType
@@ -31,10 +29,10 @@ import com.yamtrack.app.data.model.TimeToBeat
 import com.yamtrack.app.data.model.WatchProvider
 import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.ActivityMediaDetailsBinding
+import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.person.PersonActivity
-import com.yamtrack.app.widget.CalendarWidgetProvider
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * Detail screen for a tracked item.
@@ -55,6 +53,8 @@ class MediaDetailsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMediaDetailsBinding
     private val viewModel: MediaDetailsViewModel by viewModels()
+
+    @Inject lateinit var artworkPicker: ArtworkPicker
 
     private lateinit var mediaType: MediaType
     private lateinit var source: String
@@ -236,71 +236,13 @@ class MediaDetailsActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Lets the user pick the cover of this item, or of one of its seasons
-     * when [seasonNumber] is set. The choice is saved on the server, so it
-     * applies for every user and on the web app too.
-     */
+    /** Cover picker for this item, or for one of its seasons when [seasonNumber] is set. */
     private fun showArtworkPicker(seasonNumber: Int? = null) {
-        lifecycleScope.launchWhenStarted {
-            val choices = when (val r = viewModel.fetchArtworkChoices(seasonNumber)) {
-                is Result.Success -> r.data
-                is Result.Error -> {
-                    toast(r.message)
-                    return@launchWhenStarted
-                }
-                Result.Loading -> return@launchWhenStarted
-            }
-            val custom = choices.customImage
-            if (choices.options.isEmpty() && custom == null) {
-                toast(getString(R.string.artwork_none))
-                return@launchWhenStarted
-            }
-
-            var dialog: AlertDialog? = null
-            val pad = (resources.displayMetrics.density * 12).toInt()
-            val grid = RecyclerView(this@MediaDetailsActivity).apply {
-                layoutManager = GridLayoutManager(this@MediaDetailsActivity, 3)
-                setPadding(pad, pad, pad, 0)
-                clipToPadding = false
-                adapter = ArtworkAdapter(choices.options, custom) onPick@{ picked: MediaImage ->
-                    val url = picked.image ?: picked.original ?: return@onPick
-                    dialog?.dismiss()
-                    saveCover(url, seasonNumber)
-                }
-            }
-
-            val builder = AlertDialog.Builder(this@MediaDetailsActivity)
-                .setTitle(if (seasonNumber != null) R.string.change_season_cover else R.string.change_artwork)
-                .setView(grid)
-                .setNegativeButton(R.string.cancel, null)
-            if (custom != null) {
-                builder.setNeutralButton(R.string.reset_artwork) { _, _ ->
-                    saveCover(null, seasonNumber)
-                }
-            }
-            dialog = builder.show()
-        }
-    }
-
-    /** [url] null resets to the provider image. */
-    private fun saveCover(url: String?, seasonNumber: Int?) {
-        lifecycleScope.launch {
-            when (val r = viewModel.applyCover(url, seasonNumber)) {
-                is Result.Success -> {
-                    // Lists everywhere rebind through ArtworkOverrides.version;
-                    // the widget refetches from the server.
-                    CalendarWidgetProvider.requestRefresh(this@MediaDetailsActivity)
-                    toast(getString(if (url != null) R.string.artwork_updated else R.string.artwork_reset))
-                }
-                is Result.Error -> toast(getString(R.string.artwork_save_failed, r.message))
-                Result.Loading -> Unit
-            }
-        }
-    }
-
-    private fun toast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        artworkPicker.show(
+            this,
+            lifecycleScope,
+            ArtworkPicker.Target(mediaType, source, mediaId, seasonNumber)
+        )
     }
 
     private fun bindPoster(item: MediaDetails) {

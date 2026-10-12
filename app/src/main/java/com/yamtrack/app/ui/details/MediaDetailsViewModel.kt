@@ -8,8 +8,6 @@ import com.yamtrack.app.data.model.*
 import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.data.repository.YamtrackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -95,59 +93,6 @@ class MediaDetailsViewModel @Inject constructor(
                 else -> null
             }
         }
-    }
-
-    /** Images the cover can be picked from, plus the custom cover in use (if any). */
-    data class ArtworkChoices(val options: List<MediaImage>, val customImage: String?)
-
-    /**
-     * Cover options for the item, or for one of its seasons when
-     * [seasonNumber] is set. Poster-shaped images first; falls back to any
-     * image when there are no posters.
-     */
-    suspend fun fetchArtworkChoices(seasonNumber: Int? = null): Result<ArtworkChoices> =
-        coroutineScope {
-            val cover = async {
-                repository.getCover(currentMediaType, currentSource, currentMediaId, seasonNumber)
-            }
-            val images = repository.getArtworkImages(
-                currentMediaType, currentSource, currentMediaId, seasonNumber
-            )
-            when (images) {
-                is Result.Success -> {
-                    val options = images.data.posters.orEmpty().ifEmpty {
-                        images.data.backdrops.orEmpty() + images.data.screenshots.orEmpty()
-                    }.filter { !(it.image ?: it.original).isNullOrBlank() }
-                    val custom = (cover.await() as? Result.Success)?.data?.customImage
-                    Result.Success(ArtworkChoices(options, custom))
-                }
-                is Result.Error -> {
-                    cover.cancel()
-                    images
-                }
-                Result.Loading -> Result.Loading
-            }
-        }
-
-    /**
-     * Saves [image] as the cover on the server, or resets it to the
-     * provider image when null. On success every screen picks it up.
-     */
-    suspend fun applyCover(image: String?, seasonNumber: Int? = null): Result<Cover> {
-        val result = if (image != null) {
-            repository.setCover(currentMediaType, currentSource, currentMediaId, image, seasonNumber)
-        } else {
-            repository.resetCover(currentMediaType, currentSource, currentMediaId, seasonNumber)
-        }
-        if (result is Result.Success) {
-            val key = if (seasonNumber != null) {
-                ArtworkOverrides.key(MediaType.SEASON.value, currentSource, currentMediaId, seasonNumber)
-            } else {
-                ArtworkOverrides.key(currentMediaType.value, currentSource, currentMediaId)
-            }
-            key?.let { ArtworkOverrides.set(it, result.data.image) }
-        }
-        return result
     }
 
     private fun loadSeasons() {

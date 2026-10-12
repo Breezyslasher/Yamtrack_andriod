@@ -6,8 +6,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.yamtrack.app.R
@@ -17,8 +19,10 @@ import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.FragmentHomeBinding
 import com.yamtrack.app.databinding.SectionMediaGroupBinding
+import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class HomeFragment : Fragment() {
@@ -27,6 +31,8 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: HomeViewModel by viewModels()
+
+    @Inject lateinit var artworkPicker: ArtworkPicker
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -68,6 +74,16 @@ class HomeFragment : Fragment() {
         }
     }
 
+    /** Long-press a card -> pick new artwork (episodes have no cover of their own). */
+    private fun changeArtwork(item: MediaItem) {
+        val target = ArtworkPicker.Target.of(item)
+        if (target == null) {
+            Toast.makeText(requireContext(), R.string.artwork_unsupported, Toast.LENGTH_SHORT).show()
+            return
+        }
+        artworkPicker.show(requireContext(), viewLifecycleOwner.lifecycleScope, target)
+    }
+
     private fun rebindRails(container: LinearLayout) {
         for (i in 0 until container.childCount) {
             container.getChildAt(i)
@@ -97,7 +113,8 @@ class HomeFragment : Fragment() {
 
             val adapter = MediaAdapter(
                 fixedItemWidthPx = cardWidthPx,
-                onItemClick = { item -> openDetails(item) }
+                onItemClick = { item -> openDetails(item) },
+                onItemLongClick = { item -> changeArtwork(item) }
             )
             sectionBinding.rvSection.apply {
                 layoutManager = LinearLayoutManager(

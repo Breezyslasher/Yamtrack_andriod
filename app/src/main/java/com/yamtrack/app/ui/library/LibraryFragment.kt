@@ -20,10 +20,12 @@ import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.FragmentLibraryBinding
+import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import com.yamtrack.app.ui.home.MediaAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class LibraryFragment : Fragment() {
@@ -32,6 +34,8 @@ class LibraryFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: LibraryViewModel by viewModels()
+
+    @Inject lateinit var artworkPicker: ArtworkPicker
     private lateinit var mediaAdapter: MediaAdapter
 
     override fun onCreateView(
@@ -100,7 +104,7 @@ class LibraryFragment : Fragment() {
                 }
                 startActivity(intent)
             },
-            onItemLongClick = { mediaItem -> showListsDialog(mediaItem) }
+            onItemLongClick = { mediaItem -> showItemActions(mediaItem) }
         )
 
         binding.rvMedia.apply {
@@ -109,7 +113,30 @@ class LibraryFragment : Fragment() {
         }
     }
 
-    /** Long-press on a library tile -> choose which user lists this item
+    /** Long-press on a library tile -> change its artwork or its lists. */
+    private fun showItemActions(item: MediaItem) {
+        val target = ArtworkPicker.Target.of(item)
+        if (target == null) {
+            showListsDialog(item)
+            return
+        }
+        val actions = arrayOf(getString(R.string.change_artwork), getString(R.string.add_to_list))
+        AlertDialog.Builder(requireContext())
+            .setTitle(item.title.ifBlank { null })
+            .setItems(actions) { _, which ->
+                when (which) {
+                    0 -> artworkPicker.show(
+                        requireContext(),
+                        viewLifecycleOwner.lifecycleScope,
+                        target
+                    )
+                    1 -> showListsDialog(item)
+                }
+            }
+            .show()
+    }
+
+    /** Choose which user lists this item
      *  belongs to. Pre-checks the lists from item.lists, diffs on Save. */
     private fun showListsDialog(item: MediaItem) {
         viewLifecycleOwner.lifecycleScope.launch {
