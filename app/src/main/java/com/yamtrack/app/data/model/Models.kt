@@ -457,16 +457,7 @@ data class CalendarEvent(
     @Json(name = "content_number") val contentNumber: Int? = null
 ) {
     val title: String get() = item?.title.orEmpty()
-
-    /** Episode/season events fall back to the show's chosen artwork. */
-    val image: String?
-        get() = ArtworkOverrides.get(item?.artworkKey)
-            ?: ArtworkOverrides.get(
-                ArtworkOverrides.key(MediaType.TV.value, item?.source, item?.mediaId)
-            ).takeIf {
-                item?.mediaType == MediaType.SEASON.value || item?.mediaType == MediaType.EPISODE.value
-            }
-            ?: item?.image
+    val image: String? get() = ArtworkOverrides.resolve(item?.artworkKey, item?.image)
     val mediaType: MediaType? get() = item?.mediaType?.let { MediaType.fromValue(it) }
     val date: String? get() = datetime
     val seasonNumber: Int? get() = item?.seasonNumber
@@ -567,6 +558,11 @@ data class CreateListRequest(
     @Json(name = "collaborators") val collaborators: List<Long>? = null
 )
 
+/** Body for PUT .../cover/: one of the URLs returned by the images endpoint. */
+data class CoverUpdateRequest(
+    @Json(name = "image") val image: String
+)
+
 /**
  * Auth result for testConnection() and login flows.
  */
@@ -663,6 +659,15 @@ data class MediaImage(
     @Json(name = "vote_average") val voteAverage: Double? = null,
     @Json(name = "vote_count") val voteCount: Int? = null,
     @Json(name = "language") val language: String? = null
+)
+
+/**
+ * Cover of a media or season, shared by every user of the server.
+ * [customImage] is null when the provider image is in use.
+ */
+data class Cover(
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "custom_image") val customImage: String? = null
 )
 
 /** Response of GET /api/v1/media/{type}/{source}/{id}/images/. */

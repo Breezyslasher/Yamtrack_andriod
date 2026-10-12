@@ -455,12 +455,61 @@ class YamtrackRepository @Inject constructor(
         return apiCall { api.getProviders(mediaType.value, source, mediaId, country) }
     }
 
-    suspend fun getMediaImages(
+    /** Images of a media, or of one of its seasons when [seasonNumber] is set. */
+    suspend fun getArtworkImages(
         mediaType: MediaType,
         source: String,
-        mediaId: String
+        mediaId: String,
+        seasonNumber: Int? = null
     ): Result<MediaImages> = apiCall {
-        api.getMediaImages(mediaType.value, source, mediaId)
+        if (seasonNumber != null) {
+            api.getSeasonImages(mediaType.value, source, mediaId, seasonNumber)
+        } else {
+            api.getMediaImages(mediaType.value, source, mediaId)
+        }
+    }
+
+    suspend fun getCover(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        seasonNumber: Int? = null
+    ): Result<Cover> = apiCall {
+        if (seasonNumber != null) {
+            api.getSeasonCover(mediaType.value, source, mediaId, seasonNumber)
+        } else {
+            api.getCover(mediaType.value, source, mediaId)
+        }
+    }
+
+    /** Sets the cover for every user of the server. */
+    suspend fun setCover(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        image: String,
+        seasonNumber: Int? = null
+    ): Result<Cover> = apiCall {
+        val body = CoverUpdateRequest(image)
+        if (seasonNumber != null) {
+            api.setSeasonCover(mediaType.value, source, mediaId, seasonNumber, body)
+        } else {
+            api.setCover(mediaType.value, source, mediaId, body)
+        }
+    }
+
+    /** Goes back to the provider image. */
+    suspend fun resetCover(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        seasonNumber: Int? = null
+    ): Result<Cover> = apiCall {
+        if (seasonNumber != null) {
+            api.resetSeasonCover(mediaType.value, source, mediaId, seasonNumber)
+        } else {
+            api.resetCover(mediaType.value, source, mediaId)
+        }
     }
 
     suspend fun getPerson(source: String, personId: Long): Result<Person> = apiCall {

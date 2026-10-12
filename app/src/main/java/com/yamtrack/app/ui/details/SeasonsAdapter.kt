@@ -20,7 +20,8 @@ import com.yamtrack.app.databinding.ItemMediaCardBinding
  */
 class SeasonsAdapter(
     private val fixedItemWidthPx: Int,
-    private val onClick: (MediaItem) -> Unit
+    private val onClick: (MediaItem) -> Unit,
+    private val onLongClick: ((MediaItem) -> Unit)? = null
 ) : ListAdapter<MediaItem, SeasonsAdapter.VH>(Diff()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -42,6 +43,13 @@ class SeasonsAdapter(
             binding.root.setOnClickListener {
                 val pos = bindingAdapterPosition
                 if (pos != RecyclerView.NO_POSITION) onClick(getItem(pos))
+            }
+            if (onLongClick != null) {
+                binding.root.setOnLongClickListener {
+                    val pos = bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) onLongClick.invoke(getItem(pos))
+                    pos != RecyclerView.NO_POSITION
+                }
             }
         }
 

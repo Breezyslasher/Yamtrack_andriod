@@ -5,8 +5,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yamtrack.app.data.model.*
+import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.data.repository.YamtrackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -59,6 +62,7 @@ class MediaDetailsViewModel @Inject constructor(
             if (result is Result.Success) {
                 isTracked = result.data.tracked
                 _tracked.value = isTracked
+                ArtworkOverrides.sync(result.data.artworkKey, result.data.image)
             }
         }
         if (mediaType == MediaType.TV) loadSeasons()
@@ -93,22 +97,66 @@ class MediaDetailsViewModel @Inject constructor(
         }
     }
 
-    /** Poster-shaped options first; falls back to any image if none. */
-    suspend fun fetchArtworkOptions(): List<MediaImage> =
-        when (val r = repository.getMediaImages(currentMediaType, currentSource, currentMediaId)) {
-            is Result.Success -> {
-                val posters = r.data.posters.orEmpty()
-                posters.ifEmpty {
-                    r.data.backdrops.orEmpty() + r.data.screenshots.orEmpty()
-                }.filter { !(it.image ?: it.original).isNullOrBlank() }
+    /** Images the cover can be picked from, plus the custom cover in use (if any). */
+    data class ArtworkChoices(val options: List<MediaImage>, val customImage: String?)
+
+    /**
+     * Cover options for the item, or for one of its seasons when
+     * [seasonNumber] is set. Poster-shaped images first; falls back to any
+     * image when there are no posters.
+     */
+    suspend fun fetchArtworkChoices(seasonNumber: Int? = null): Result<ArtworkChoices> =
+        coroutineScope {
+            val cover = async {
+                repository.getCover(currentMediaType, currentSource, currentMediaId, seasonNumber)
             }
-            else -> emptyList()
+            val images = repository.getArtworkImages(
+                currentMediaType, currentSource, currentMediaId, seasonNumber
+            )
+            when (images) {
+                is Result.Success -> {
+                    val options = images.data.posters.orEmpty().ifEmpty {
+                        images.data.backdrops.orEmpty() + images.data.screenshots.orEmpty()
+                    }.filter { !(it.image ?: it.original).isNullOrBlank() }
+                    val custom = (cover.await() as? Result.Success)?.data?.customImage
+                    Result.Success(ArtworkChoices(options, custom))
+                }
+                is Result.Error -> {
+                    cover.cancel()
+                    images
+                }
+                Result.Loading -> Result.Loading
+            }
         }
+
+    /**
+     * Saves [image] as the cover on the server, or resets it to the
+     * provider image when null. On success every screen picks it up.
+     */
+    suspend fun applyCover(image: String?, seasonNumber: Int? = null): Result<Cover> {
+        val result = if (image != null) {
+            repository.setCover(currentMediaType, currentSource, currentMediaId, image, seasonNumber)
+        } else {
+            repository.resetCover(currentMediaType, currentSource, currentMediaId, seasonNumber)
+        }
+        if (result is Result.Success) {
+            val key = if (seasonNumber != null) {
+                ArtworkOverrides.key(MediaType.SEASON.value, currentSource, currentMediaId, seasonNumber)
+            } else {
+                ArtworkOverrides.key(currentMediaType.value, currentSource, currentMediaId)
+            }
+            key?.let { ArtworkOverrides.set(it, result.data.image) }
+        }
+        return result
+    }
 
     private fun loadSeasons() {
         viewModelScope.launch {
             _seasons.value = when (val r = repository.getSeasons(currentSource, currentMediaId)) {
-                is Result.Success -> r.data.sortedBy { it.item?.seasonNumber ?: 0 }
+                is Result.Success -> {
+                    r.data.forEach { ArtworkOverrides.sync(it.item?.artworkKey, it.item?.image) }
+                    r.data.sortedBy { it.item?.seasonNumber ?: 0 }
+                }
                 else -> emptyList()
             }
         }

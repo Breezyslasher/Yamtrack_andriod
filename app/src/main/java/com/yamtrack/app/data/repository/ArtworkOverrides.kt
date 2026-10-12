@@ -1,23 +1,23 @@
 package com.yamtrack.app.data.repository
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * User-chosen artwork per media item, stored on-device.
+ * Covers changed during this session, keyed by media item.
  *
- * The API exposes the list of available images but has no field to persist
- * a custom one, so the choice lives here and is applied wherever the app
- * renders that item's image (model getters read through [resolve]).
+ * The cover itself is stored on the server (the `cover/` endpoints) and
+ * comes back as the item's `image` on every later fetch. This in-memory
+ * map only bridges the gap for lists that were loaded before the change,
+ * so every screen shows the new cover right away without refetching.
  */
 object ArtworkOverrides {
 
-    private const val PREFS = "artwork_overrides"
+    /** Old on-device store from before covers were saved on the server. */
+    private const val LEGACY_PREFS = "artwork_overrides"
 
-    private var prefs: SharedPreferences? = null
     private val cache = ConcurrentHashMap<String, String>()
 
     private val _version = MutableLiveData(0)
@@ -25,10 +25,7 @@ object ArtworkOverrides {
     val version: LiveData<Int> = _version
 
     fun init(context: Context) {
-        val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        prefs = p
-        cache.clear()
-        p.all.forEach { (k, v) -> if (v is String) cache[k] = v }
+        context.applicationContext.deleteSharedPreferences(LEGACY_PREFS)
     }
 
     fun key(
@@ -47,19 +44,26 @@ object ArtworkOverrides {
 
     fun get(key: String?): String? = key?.let { cache[it] }
 
-    /** Returns the override for [key] if one is set, otherwise [fallback]. */
+    /** Returns the cover changed this session for [key], otherwise [fallback]. */
     fun resolve(key: String?, fallback: String?): String? = get(key) ?: fallback
 
-    fun set(key: String, url: String) {
-        cache[key] = url
-        prefs?.edit()?.putString(key, url)?.apply()
+    /** Records the cover the server now has for [key] (null = none known). */
+    fun set(key: String, url: String?) {
+        if (url.isNullOrBlank()) {
+            if (cache.remove(key) == null) return
+        } else {
+            if (cache.put(key, url) == url) return
+        }
         bump()
     }
 
-    fun clear(key: String) {
-        cache.remove(key)
-        prefs?.edit()?.remove(key)?.apply()
-        bump()
+    /**
+     * Fresh server data for [key]: if this session changed its cover, follow
+     * what the server says now (it may have been changed again elsewhere).
+     */
+    fun sync(key: String?, serverImage: String?) {
+        if (key == null || !cache.containsKey(key)) return
+        set(key, serverImage)
     }
 
     private fun bump() {
