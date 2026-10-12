@@ -69,6 +69,12 @@
             android:parentActivityName=".MainActivity" />
 
         <activity
+            android:name=".ui.person.PersonActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Yamtrack.NoActionBar"
+            android:parentActivityName=".ui.details.MediaDetailsActivity" />
+
+        <activity
             android:name=".ui.episodes.EpisodesActivity"
             android:exported="false"
             android:theme="@style/Theme.Yamtrack.NoActionBar"

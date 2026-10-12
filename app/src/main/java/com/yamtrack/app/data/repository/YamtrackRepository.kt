@@ -429,6 +429,52 @@ class YamtrackRepository @Inject constructor(
         api.getMediaHistory(mediaType.value, source, mediaId)
     }.map { it.results }
 
+    // ===================== Credits, providers, artwork =====================
+
+    suspend fun getCast(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String
+    ): Result<List<CastMember>> = apiCall {
+        api.getCast(mediaType.value, source, mediaId)
+    }.map { it.results }
+
+    /**
+     * Tries the user's server-side region preference first; if none is set
+     * (server replies 400), falls back to the device's country.
+     */
+    suspend fun getProviders(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String
+    ): Result<WatchProviders> {
+        val first = apiCall { api.getProviders(mediaType.value, source, mediaId) }
+        if (first !is Result.Error || first.code != 400) return first
+        val country = java.util.Locale.getDefault().country
+        if (country.isBlank()) return first
+        return apiCall { api.getProviders(mediaType.value, source, mediaId, country) }
+    }
+
+    suspend fun getMediaImages(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String
+    ): Result<MediaImages> = apiCall {
+        api.getMediaImages(mediaType.value, source, mediaId)
+    }
+
+    suspend fun getPerson(source: String, personId: Long): Result<Person> = apiCall {
+        api.getPerson(source, personId)
+    }
+
+    suspend fun getPersonKnownFor(
+        source: String,
+        personId: Long,
+        mediaType: MediaType? = null
+    ): Result<List<KnownFor>> = apiCall {
+        api.getPersonKnownFor(source, personId, mediaType?.value)
+    }.map { it.results }
+
     // ===================== Helpers =====================
 
     /**

@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.FragmentSearchBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -112,6 +113,10 @@ class SearchFragment : Fragment() {
     }
 
     private fun observeViewModel() {
+        ArtworkOverrides.version.observe(viewLifecycleOwner) {
+            searchAdapter.notifyDataSetChanged()
+        }
+
         viewModel.searchResults.observe(viewLifecycleOwner) { result ->
             when (result) {
                 is Result.Success -> {

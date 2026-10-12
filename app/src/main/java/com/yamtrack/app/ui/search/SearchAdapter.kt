@@ -59,8 +59,9 @@ class SearchAdapter(
             val year = item.year?.takeIf { it.isNotBlank() }
             binding.tvType.text = if (year != null) "$typeLabel · $year" else typeLabel
 
-            if (!item.image.isNullOrBlank()) {
-                binding.ivPoster.load(item.image) {
+            val image = item.displayImage
+            if (!image.isNullOrBlank()) {
+                binding.ivPoster.load(image) {
                     crossfade(true)
                     placeholder(R.drawable.placeholder_poster)
                     error(R.drawable.placeholder_poster)

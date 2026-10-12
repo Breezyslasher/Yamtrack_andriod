@@ -218,6 +218,52 @@ interface YamtrackApi {
         @Query("offset") offset: Int = 0
     ): Response<PaginatedResponse<HistoryEntry>>
 
+    /** Cast of a movie / tv serie (TMDB) or voice actors of an anime (MAL). */
+    @GET("api/v1/media/{media_type}/{source}/{media_id}/cast/")
+    suspend fun getCast(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): Response<PaginatedResponse<CastMember>>
+
+    /** Where to watch. Without `region` the server uses the user's preference. */
+    @GET("api/v1/media/{media_type}/{source}/{media_id}/providers/")
+    suspend fun getProviders(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Query("region") region: String? = null
+    ): Response<WatchProviders>
+
+    /** Available artwork; `type` is posters, backdrops, screenshots or logos. */
+    @GET("api/v1/media/{media_type}/{source}/{media_id}/images/")
+    suspend fun getMediaImages(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Query("type") type: String? = null
+    ): Response<MediaImages>
+
+    // ============== People ==============
+
+    @GET("api/v1/people/{source}/{person_id}/")
+    suspend fun getPerson(
+        @Path("source") source: String,
+        @Path("person_id") personId: Long
+    ): Response<Person>
+
+    /** `media_type` is movie or tv; omit for both. */
+    @GET("api/v1/people/{source}/{person_id}/known_for/")
+    suspend fun getPersonKnownFor(
+        @Path("source") source: String,
+        @Path("person_id") personId: Long,
+        @Query("media_type") mediaType: String? = null,
+        @Query("limit") limit: Int = 100,
+        @Query("offset") offset: Int = 0
+    ): Response<PaginatedResponse<KnownFor>>
+
     // ============== Search ==============
 
     /**

@@ -14,6 +14,7 @@ import com.yamtrack.app.R
 import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.FragmentHomeBinding
 import com.yamtrack.app.databinding.SectionMediaGroupBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
@@ -59,6 +60,19 @@ class HomeFragment : Fragment() {
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.swipeRefresh.isRefreshing = isLoading
+        }
+
+        ArtworkOverrides.version.observe(viewLifecycleOwner) {
+            rebindRails(binding.llRecentSections)
+            rebindRails(binding.llPlanningSections)
+        }
+    }
+
+    private fun rebindRails(container: LinearLayout) {
+        for (i in 0 until container.childCount) {
+            container.getChildAt(i)
+                .findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvSection)
+                ?.adapter?.notifyDataSetChanged()
         }
     }
 

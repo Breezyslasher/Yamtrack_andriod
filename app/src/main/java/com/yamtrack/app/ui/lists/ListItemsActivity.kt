@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.yamtrack.app.R
 import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.ActivityListItemsBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import com.yamtrack.app.ui.home.MediaAdapter
@@ -49,6 +50,8 @@ class ListItemsActivity : AppCompatActivity() {
         )
         binding.rvItems.layoutManager = GridLayoutManager(this, 3)
         binding.rvItems.adapter = adapter
+
+        ArtworkOverrides.version.observe(this) { adapter.notifyDataSetChanged() }
 
         viewModel.items.observe(this) { result ->
             when (result) {

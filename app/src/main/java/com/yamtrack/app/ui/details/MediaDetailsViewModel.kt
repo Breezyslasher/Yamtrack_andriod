@@ -35,6 +35,13 @@ class MediaDetailsViewModel @Inject constructor(
     private val _seasons = MutableLiveData<List<MediaItem>>(emptyList())
     val seasons: LiveData<List<MediaItem>> = _seasons
 
+    private val _cast = MutableLiveData<List<CastMember>>(emptyList())
+    val cast: LiveData<List<CastMember>> = _cast
+
+    /** Null until loaded, or when the item has no providers in this region. */
+    private val _providers = MutableLiveData<WatchProviders?>(null)
+    val providers: LiveData<WatchProviders?> = _providers
+
     private var currentMediaType: MediaType = MediaType.MOVIE
     private var currentSource: String = "tmdb"
     private var currentMediaId: String = ""
@@ -54,9 +61,49 @@ class MediaDetailsViewModel @Inject constructor(
                 _tracked.value = isTracked
             }
         }
-        loadRecommendations()
         if (mediaType == MediaType.TV) loadSeasons()
+
+        // Recommendations, cast and providers don't change when the user
+        // edits status/score, so only fetch them once per item.
+        val key = "${mediaType.value}|$source|$mediaId"
+        if (key == extrasLoadedFor) return
+        extrasLoadedFor = key
+        loadRecommendations()
+        if (mediaType in CAST_TYPES) loadCast()
+        if (mediaType == MediaType.MOVIE || mediaType == MediaType.TV) loadProviders()
     }
+
+    private var extrasLoadedFor: String? = null
+
+    private fun loadCast() {
+        viewModelScope.launch {
+            _cast.value = when (val r = repository.getCast(currentMediaType, currentSource, currentMediaId)) {
+                is Result.Success -> r.data.sortedBy { it.order ?: Int.MAX_VALUE }
+                else -> emptyList()
+            }
+        }
+    }
+
+    private fun loadProviders() {
+        viewModelScope.launch {
+            _providers.value = when (val r = repository.getProviders(currentMediaType, currentSource, currentMediaId)) {
+                is Result.Success -> r.data
+                else -> null
+            }
+        }
+    }
+
+    /** Poster-shaped options first; falls back to any image if none. */
+    suspend fun fetchArtworkOptions(): List<MediaImage> =
+        when (val r = repository.getMediaImages(currentMediaType, currentSource, currentMediaId)) {
+            is Result.Success -> {
+                val posters = r.data.posters.orEmpty()
+                posters.ifEmpty {
+                    r.data.backdrops.orEmpty() + r.data.screenshots.orEmpty()
+                }.filter { !(it.image ?: it.original).isNullOrBlank() }
+            }
+            else -> emptyList()
+        }
 
     private fun loadSeasons() {
         viewModelScope.launch {
@@ -208,6 +255,11 @@ class MediaDetailsViewModel @Inject constructor(
                 else -> OperationResult.Error("Unknown error")
             }
         }
+    }
+
+    companion object {
+        /** Media types the server can return a cast for. */
+        private val CAST_TYPES = setOf(MediaType.MOVIE, MediaType.TV, MediaType.ANIME)
     }
 
     sealed class OperationResult {

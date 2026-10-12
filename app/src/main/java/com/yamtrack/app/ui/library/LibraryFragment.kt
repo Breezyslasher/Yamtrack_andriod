@@ -18,6 +18,7 @@ import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.FragmentLibraryBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import com.yamtrack.app.ui.home.MediaAdapter
@@ -202,6 +203,10 @@ class LibraryFragment : Fragment() {
     }
 
     private fun observeViewModel() {
+        ArtworkOverrides.version.observe(viewLifecycleOwner) {
+            mediaAdapter.notifyDataSetChanged()
+        }
+
         viewModel.mediaType.observe(viewLifecycleOwner) { type ->
             syncMediaTypeChips(type)
         }
