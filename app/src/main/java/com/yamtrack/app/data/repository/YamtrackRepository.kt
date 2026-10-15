@@ -173,6 +173,26 @@ class YamtrackRepository @Inject constructor(
         score: Double? = null,
         progress: Int? = null,
         notes: String? = null
+    ): Result<MediaDetails> {
+        // The add endpoint converts `status` twice (TrackMediaSerializer's
+        // status field already maps 0 -> "Planning", then the view maps it
+        // again and gets None), so any status we send fails with
+        // "status: This field is required". Leaving it out makes the server
+        // use its default, Planning; any other status is set right after
+        // with PATCH, which converts it correctly.
+        val added = postMedia(mediaType, source, mediaId, status, score, progress, notes)
+        if (added !is Result.Success || status == MediaStatus.PLANNING) return added
+        return updateMedia(mediaType, source, mediaId, UpdateMediaRequest(status = status.code))
+    }
+
+    private suspend fun postMedia(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        status: MediaStatus,
+        score: Double?,
+        progress: Int?,
+        notes: String?
     ): Result<MediaDetails> = apiCall {
         // MediaForm.Meta.fields (the parent form) includes `progress`, so
         // for anime / manga / game / book / comic / boardgame the add POST
@@ -188,7 +208,7 @@ class YamtrackRepository @Inject constructor(
             request = AddMediaRequest(
                 mediaId = mediaId,
                 source = source,
-                status = status.code,
+                status = null, // see addMedia()
                 score = score,
                 progress = effectiveProgress,
                 notes = notes
