@@ -1,6 +1,7 @@
 package com.yamtrack.app.ui.details
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
@@ -11,18 +12,27 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.transform.RoundedCornersTransformation
 import com.google.android.material.chip.Chip
 import com.yamtrack.app.R
+import com.yamtrack.app.data.model.CastMember
 import com.yamtrack.app.data.model.MediaDetails
 import com.yamtrack.app.data.model.MediaItem
 import com.yamtrack.app.data.model.MediaStatus
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.model.SearchResult
+import com.yamtrack.app.data.model.Sources
+import com.yamtrack.app.data.model.TimeToBeat
+import com.yamtrack.app.data.model.WatchProvider
+import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.ActivityMediaDetailsBinding
+import com.yamtrack.app.ui.common.ArtworkPicker
+import com.yamtrack.app.ui.person.PersonActivity
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Detail screen for a tracked item.
@@ -38,10 +48,13 @@ class MediaDetailsActivity : AppCompatActivity() {
         const val EXTRA_SOURCE = "source"
         const val EXTRA_MEDIA_ID = "media_id"
         private const val MENU_ADD_TO_LIST = 1
+        private const val MENU_CHANGE_ARTWORK = 2
     }
 
     private lateinit var binding: ActivityMediaDetailsBinding
     private val viewModel: MediaDetailsViewModel by viewModels()
+
+    @Inject lateinit var artworkPicker: ArtworkPicker
 
     private lateinit var mediaType: MediaType
     private lateinit var source: String
@@ -49,6 +62,10 @@ class MediaDetailsActivity : AppCompatActivity() {
 
     private lateinit var recommendationsAdapter: RecommendationsAdapter
     private lateinit var seasonsAdapter: SeasonsAdapter
+    private lateinit var castAdapter: CastAdapter
+    private lateinit var freeProvidersAdapter: ProvidersAdapter
+    private lateinit var paidProvidersAdapter: ProvidersAdapter
+    private var providersLink: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,9 +103,13 @@ class MediaDetailsActivity : AppCompatActivity() {
         // this horizontal rail that stretches each card to the full screen,
         // so pin a fixed card width like the home rails do.
         val seasonCardWidth = (resources.displayMetrics.density * 120).toInt()
-        seasonsAdapter = SeasonsAdapter(seasonCardWidth) { season ->
-            openEpisodes(season)
-        }
+        seasonsAdapter = SeasonsAdapter(
+            seasonCardWidth,
+            onClick = { season -> openEpisodes(season) },
+            onLongClick = { season ->
+                season.item?.seasonNumber?.let { showArtworkPicker(it) }
+            }
+        )
         binding.rvSeasons.apply {
             layoutManager = LinearLayoutManager(
                 this@MediaDetailsActivity,
@@ -97,6 +118,49 @@ class MediaDetailsActivity : AppCompatActivity() {
             )
             adapter = seasonsAdapter
         }
+
+        // People pages exist for TMDB only; anime voice actors (AniList)
+        // render without a click target.
+        val onCastClick: ((CastMember) -> Unit)? =
+            if (source == Sources.TMDB) ::openPerson else null
+        castAdapter = CastAdapter(onCastClick)
+        binding.rvCast.horizontalRail(castAdapter)
+
+        freeProvidersAdapter = ProvidersAdapter { openProvidersLink(it) }
+        paidProvidersAdapter = ProvidersAdapter { openProvidersLink(it) }
+        binding.rvProvidersFree.horizontalRail(freeProvidersAdapter)
+        binding.rvProvidersPaid.horizontalRail(paidProvidersAdapter)
+        binding.tvProvidersHeader.setOnClickListener { openProvidersLink(null) }
+    }
+
+    private fun RecyclerView.horizontalRail(rvAdapter: RecyclerView.Adapter<*>) {
+        layoutManager = LinearLayoutManager(
+            this@MediaDetailsActivity,
+            LinearLayoutManager.HORIZONTAL,
+            false
+        )
+        adapter = rvAdapter
+    }
+
+    private fun openPerson(member: CastMember) {
+        val personId = member.personId ?: return
+        startActivity(
+            Intent(this, PersonActivity::class.java).apply {
+                putExtra(PersonActivity.EXTRA_SOURCE, Sources.TMDB)
+                putExtra(PersonActivity.EXTRA_PERSON_ID, personId)
+                putExtra(PersonActivity.EXTRA_NAME, member.name)
+            }
+        )
+    }
+
+    /** TMDB only gives one region-wide "where to watch" link, not per-service deep links. */
+    @Suppress("UNUSED_PARAMETER")
+    private fun openProvidersLink(provider: WatchProvider?) {
+        val link = providersLink ?: return
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) }
+            .onFailure {
+                Toast.makeText(this, R.string.could_not_open_browser, Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun openEpisodes(season: MediaItem) {
@@ -152,21 +216,69 @@ class MediaDetailsActivity : AppCompatActivity() {
         binding.tvScore.setOnClickListener {
             showScoreDialog()
         }
-        // Long-press the poster to bring up media actions (Add to list).
-        // Cover/image change isn't an API-supported action, so it's omitted.
+        // Tap the poster to pick new artwork; long-press for all actions.
+        binding.ivPoster.setOnClickListener { showArtworkPicker() }
         binding.ivPoster.isLongClickable = true
         binding.ivPoster.setOnLongClickListener { anchor ->
             android.widget.PopupMenu(this, anchor).apply {
-                menu.add(0, MENU_ADD_TO_LIST, 0, R.string.add_to_list)
+                menu.add(0, MENU_CHANGE_ARTWORK, 0, R.string.change_artwork)
+                menu.add(0, MENU_ADD_TO_LIST, 1, R.string.add_to_list)
                 setOnMenuItemClickListener { item ->
-                    if (item.itemId == MENU_ADD_TO_LIST) {
-                        showAddToListDialog(); true
-                    } else false
+                    when (item.itemId) {
+                        MENU_CHANGE_ARTWORK -> { showArtworkPicker(); true }
+                        MENU_ADD_TO_LIST -> { showAddToListDialog(); true }
+                        else -> false
+                    }
                 }
                 show()
             }
             true
         }
+    }
+
+    /** Cover picker for this item, or for one of its seasons when [seasonNumber] is set. */
+    private fun showArtworkPicker(seasonNumber: Int? = null) {
+        artworkPicker.show(
+            this,
+            lifecycleScope,
+            ArtworkPicker.Target(mediaType, source, mediaId, seasonNumber)
+        )
+    }
+
+    private fun bindPoster(item: MediaDetails) {
+        val url = item.displayImage
+        if (!url.isNullOrBlank()) {
+            binding.ivPoster.load(url) {
+                crossfade(true)
+                placeholder(R.drawable.placeholder_poster)
+                error(R.drawable.placeholder_poster)
+                transformations(RoundedCornersTransformation(16f))
+            }
+        } else {
+            binding.ivPoster.setImageResource(R.drawable.placeholder_poster)
+        }
+    }
+
+    private fun bindTimeToBeat(ttb: TimeToBeat?) {
+        val show = mediaType == MediaType.GAME && ttb != null && !ttb.isEmpty
+        binding.tvTimeToBeatHeader.visibility = if (show) View.VISIBLE else View.GONE
+        binding.layoutTimeToBeat.visibility = if (show) View.VISIBLE else View.GONE
+        if (!show || ttb == null) return
+        binding.tvTtbHastily.text = formatHours(ttb.hastily)
+        binding.tvTtbNormally.text = formatHours(ttb.normally)
+        binding.tvTtbCompletely.text = formatHours(ttb.completely)
+    }
+
+    /** Seconds -> "12h" / "12.5h"; IGDB times are coarse so one decimal is plenty. */
+    private fun formatHours(seconds: Long?): String {
+        if (seconds == null || seconds <= 0) return getString(R.string.time_unknown)
+        val hours = seconds / 3600.0
+        val text = if (hours >= 10 || hours % 1.0 < 0.05) {
+            Math.round(hours).toString()
+        } else {
+            String.format(java.util.Locale.getDefault(), "%.1f", hours)
+        }
+        return getString(R.string.time_hours_format, text)
     }
 
     private fun showAddToListDialog() {
@@ -309,6 +421,35 @@ class MediaDetailsActivity : AppCompatActivity() {
                 if (visible) View.VISIBLE else View.GONE
         }
 
+        viewModel.cast.observe(this) { cast ->
+            castAdapter.submitList(cast)
+            val visible = cast.isNotEmpty()
+            binding.tvCastHeader.visibility = if (visible) View.VISIBLE else View.GONE
+            binding.rvCast.visibility = if (visible) View.VISIBLE else View.GONE
+        }
+
+        viewModel.providers.observe(this) { providers ->
+            providersLink = providers?.link
+            val free = providers?.noCharge.orEmpty()
+            val paid = providers?.paid.orEmpty()
+            freeProvidersAdapter.submitList(free)
+            paidProvidersAdapter.submitList(paid)
+            binding.tvProvidersHeader.visibility =
+                if (free.isNotEmpty() || paid.isNotEmpty()) View.VISIBLE else View.GONE
+            binding.tvProvidersFreeLabel.visibility = if (free.isNotEmpty()) View.VISIBLE else View.GONE
+            binding.rvProvidersFree.visibility = if (free.isNotEmpty()) View.VISIBLE else View.GONE
+            binding.tvProvidersPaidLabel.visibility = if (paid.isNotEmpty()) View.VISIBLE else View.GONE
+            binding.rvProvidersPaid.visibility = if (paid.isNotEmpty()) View.VISIBLE else View.GONE
+        }
+
+        // Artwork changed elsewhere (or here) — rebind everything that
+        // shows an overridable image.
+        ArtworkOverrides.version.observe(this) {
+            (viewModel.details.value as? Result.Success)?.data?.let { bindPoster(it) }
+            recommendationsAdapter.notifyDataSetChanged()
+            seasonsAdapter.notifyDataSetChanged()
+        }
+
         viewModel.seasons.observe(this) { seasons ->
             seasonsAdapter.submitList(seasons)
             val visible = seasons.isNotEmpty()
@@ -328,14 +469,8 @@ class MediaDetailsActivity : AppCompatActivity() {
                 ?: item.userNotes?.takeIf { it.isNotBlank() }
                 ?: "No overview available."
 
-            if (!item.image.isNullOrBlank()) {
-                ivPoster.load(item.image) {
-                    crossfade(true)
-                    placeholder(R.drawable.placeholder_poster)
-                    error(R.drawable.placeholder_poster)
-                    transformations(RoundedCornersTransformation(16f))
-                }
-            }
+            bindPoster(item)
+            bindTimeToBeat(item.timeToBeat)
 
             // Release year / air-date range, e.g. "2011" or "2011 - 2013".
             val release = item.releaseLabel

@@ -173,6 +173,26 @@ class YamtrackRepository @Inject constructor(
         score: Double? = null,
         progress: Int? = null,
         notes: String? = null
+    ): Result<MediaDetails> {
+        // The add endpoint converts `status` twice (TrackMediaSerializer's
+        // status field already maps 0 -> "Planning", then the view maps it
+        // again and gets None), so any status we send fails with
+        // "status: This field is required". Leaving it out makes the server
+        // use its default, Planning; any other status is set right after
+        // with PATCH, which converts it correctly.
+        val added = postMedia(mediaType, source, mediaId, status, score, progress, notes)
+        if (added !is Result.Success || status == MediaStatus.PLANNING) return added
+        return updateMedia(mediaType, source, mediaId, UpdateMediaRequest(status = status.code))
+    }
+
+    private suspend fun postMedia(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        status: MediaStatus,
+        score: Double?,
+        progress: Int?,
+        notes: String?
     ): Result<MediaDetails> = apiCall {
         // MediaForm.Meta.fields (the parent form) includes `progress`, so
         // for anime / manga / game / book / comic / boardgame the add POST
@@ -188,7 +208,7 @@ class YamtrackRepository @Inject constructor(
             request = AddMediaRequest(
                 mediaId = mediaId,
                 source = source,
-                status = status.code,
+                status = null, // see addMedia()
                 score = score,
                 progress = effectiveProgress,
                 notes = notes
@@ -427,6 +447,101 @@ class YamtrackRepository @Inject constructor(
         mediaId: String
     ): Result<List<HistoryEntry>> = apiCall {
         api.getMediaHistory(mediaType.value, source, mediaId)
+    }.map { it.results }
+
+    // ===================== Credits, providers, artwork =====================
+
+    suspend fun getCast(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String
+    ): Result<List<CastMember>> = apiCall {
+        api.getCast(mediaType.value, source, mediaId)
+    }.map { it.results }
+
+    /**
+     * Tries the user's server-side region preference first; if none is set
+     * (server replies 400), falls back to the device's country.
+     */
+    suspend fun getProviders(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String
+    ): Result<WatchProviders> {
+        val first = apiCall { api.getProviders(mediaType.value, source, mediaId) }
+        if (first !is Result.Error || first.code != 400) return first
+        val country = java.util.Locale.getDefault().country
+        if (country.isBlank()) return first
+        return apiCall { api.getProviders(mediaType.value, source, mediaId, country) }
+    }
+
+    /** Images of a media, or of one of its seasons when [seasonNumber] is set. */
+    suspend fun getArtworkImages(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        seasonNumber: Int? = null
+    ): Result<MediaImages> = apiCall {
+        if (seasonNumber != null) {
+            api.getSeasonImages(mediaType.value, source, mediaId, seasonNumber)
+        } else {
+            api.getMediaImages(mediaType.value, source, mediaId)
+        }
+    }
+
+    suspend fun getCover(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        seasonNumber: Int? = null
+    ): Result<Cover> = apiCall {
+        if (seasonNumber != null) {
+            api.getSeasonCover(mediaType.value, source, mediaId, seasonNumber)
+        } else {
+            api.getCover(mediaType.value, source, mediaId)
+        }
+    }
+
+    /** Sets the cover for every user of the server. */
+    suspend fun setCover(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        image: String,
+        seasonNumber: Int? = null
+    ): Result<Cover> = apiCall {
+        val body = CoverUpdateRequest(image)
+        if (seasonNumber != null) {
+            api.setSeasonCover(mediaType.value, source, mediaId, seasonNumber, body)
+        } else {
+            api.setCover(mediaType.value, source, mediaId, body)
+        }
+    }
+
+    /** Goes back to the provider image. */
+    suspend fun resetCover(
+        mediaType: MediaType,
+        source: String,
+        mediaId: String,
+        seasonNumber: Int? = null
+    ): Result<Cover> = apiCall {
+        if (seasonNumber != null) {
+            api.resetSeasonCover(mediaType.value, source, mediaId, seasonNumber)
+        } else {
+            api.resetCover(mediaType.value, source, mediaId)
+        }
+    }
+
+    suspend fun getPerson(source: String, personId: Long): Result<Person> = apiCall {
+        api.getPerson(source, personId)
+    }
+
+    suspend fun getPersonKnownFor(
+        source: String,
+        personId: Long,
+        mediaType: MediaType? = null
+    ): Result<List<KnownFor>> = apiCall {
+        api.getPersonKnownFor(source, personId, mediaType?.value)
     }.map { it.results }
 
     // ===================== Helpers =====================

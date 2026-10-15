@@ -218,6 +218,111 @@ interface YamtrackApi {
         @Query("offset") offset: Int = 0
     ): Response<PaginatedResponse<HistoryEntry>>
 
+    /** Cast of a movie / tv serie (TMDB) or voice actors of an anime (MAL). */
+    @GET("api/v1/media/{media_type}/{source}/{media_id}/cast/")
+    suspend fun getCast(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): Response<PaginatedResponse<CastMember>>
+
+    /** Where to watch. Without `region` the server uses the user's preference. */
+    @GET("api/v1/media/{media_type}/{source}/{media_id}/providers/")
+    suspend fun getProviders(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Query("region") region: String? = null
+    ): Response<WatchProviders>
+
+    /** Available artwork; `type` is posters, backdrops, screenshots or logos. */
+    @GET("api/v1/media/{media_type}/{source}/{media_id}/images/")
+    suspend fun getMediaImages(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Query("type") type: String? = null
+    ): Response<MediaImages>
+
+    @GET("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/images/")
+    suspend fun getSeasonImages(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("season_number") seasonNumber: Int,
+        @Query("type") type: String? = null
+    ): Response<MediaImages>
+
+    // ============== Cover (server-wide custom artwork) ==============
+
+    @GET("api/v1/media/{media_type}/{source}/{media_id}/cover/")
+    suspend fun getCover(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String
+    ): Response<Cover>
+
+    /** `image` must be one of the URLs returned by the images endpoint. */
+    @PUT("api/v1/media/{media_type}/{source}/{media_id}/cover/")
+    suspend fun setCover(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Body request: CoverUpdateRequest
+    ): Response<Cover>
+
+    @DELETE("api/v1/media/{media_type}/{source}/{media_id}/cover/")
+    suspend fun resetCover(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String
+    ): Response<Cover>
+
+    @GET("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/cover/")
+    suspend fun getSeasonCover(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("season_number") seasonNumber: Int
+    ): Response<Cover>
+
+    @PUT("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/cover/")
+    suspend fun setSeasonCover(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("season_number") seasonNumber: Int,
+        @Body request: CoverUpdateRequest
+    ): Response<Cover>
+
+    @DELETE("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/cover/")
+    suspend fun resetSeasonCover(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("season_number") seasonNumber: Int
+    ): Response<Cover>
+
+    // ============== People ==============
+
+    @GET("api/v1/people/{source}/{person_id}/")
+    suspend fun getPerson(
+        @Path("source") source: String,
+        @Path("person_id") personId: Long
+    ): Response<Person>
+
+    /** `media_type` is movie or tv; omit for both. */
+    @GET("api/v1/people/{source}/{person_id}/known_for/")
+    suspend fun getPersonKnownFor(
+        @Path("source") source: String,
+        @Path("person_id") personId: Long,
+        @Query("media_type") mediaType: String? = null,
+        @Query("limit") limit: Int = 100,
+        @Query("offset") offset: Int = 0
+    ): Response<PaginatedResponse<KnownFor>>
+
     // ============== Search ==============
 
     /**

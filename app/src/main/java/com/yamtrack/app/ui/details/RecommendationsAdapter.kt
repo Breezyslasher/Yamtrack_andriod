@@ -36,8 +36,9 @@ class RecommendationsAdapter(
 
         fun bind(item: SearchResult) {
             binding.tvTitle.text = item.displayTitle
-            if (!item.image.isNullOrBlank()) {
-                binding.ivPoster.load(item.image) {
+            val image = item.displayImage
+            if (!image.isNullOrBlank()) {
+                binding.ivPoster.load(image) {
                     crossfade(true)
                     placeholder(R.drawable.placeholder_poster)
                     error(R.drawable.placeholder_poster)

@@ -1,6 +1,7 @@
 package com.yamtrack.app.data.model
 
 import com.squareup.moshi.Json
+import com.yamtrack.app.data.repository.ArtworkOverrides
 
 /**
  * Media types that can have a *parent* tracked entry.
@@ -94,7 +95,10 @@ data class Item(
     @Json(name = "image") val image: String? = null,
     @Json(name = "season_number") val seasonNumber: Int? = null,
     @Json(name = "episode_number") val episodeNumber: Int? = null
-)
+) {
+    val artworkKey: String?
+        get() = ArtworkOverrides.key(mediaType, source, mediaId, seasonNumber, episodeNumber)
+}
 
 /**
  * Membership entry returned in the `lists` array of MediaItem.
@@ -131,7 +135,7 @@ data class MediaItem(
     val mediaType: MediaType? get() = item?.mediaType?.let { MediaType.fromValue(it) }
     val mediaStatus: MediaStatus? get() = MediaStatus.fromApi(status)
     val title: String get() = item?.title.orEmpty()
-    val image: String? get() = item?.image
+    val image: String? get() = ArtworkOverrides.resolve(item?.artworkKey, item?.image)
     val mediaId: String get() = item?.mediaId.orEmpty()
     val source: String get() = item?.source.orEmpty()
 }
@@ -163,9 +167,16 @@ data class MediaDetails(
     @Json(name = "tracked") val tracked: Boolean = false,
     @Json(name = "consumptions_number") val consumptionsNumber: Int = 0,
     @Json(name = "consumptions") val consumptions: List<HistoryEntry>? = null,
-    @Json(name = "lists") val lists: List<MediaListMembership>? = null
+    @Json(name = "lists") val lists: List<MediaListMembership>? = null,
+    @Json(name = "external_links") val externalLinks: Map<String, String>? = null,
+    @Json(name = "time_to_beat") val timeToBeat: TimeToBeat? = null
 ) {
     val type: MediaType? get() = MediaType.fromValue(mediaType)
+
+    val artworkKey: String? get() = ArtworkOverrides.key(mediaType, source, mediaId)
+
+    /** Poster to render: the user's chosen artwork if any, else upstream. */
+    val displayImage: String? get() = ArtworkOverrides.resolve(artworkKey, image)
 
     /** First consumption entry contains the user's tracking state. */
     val userConsumption: HistoryEntry? get() = consumptions?.firstOrNull()
@@ -273,6 +284,8 @@ data class SearchResult(
 ) {
     val type: MediaType? get() = MediaType.fromValue(mediaType)
     val displayTitle: String get() = title ?: "Unknown"
+    val displayImage: String?
+        get() = ArtworkOverrides.resolve(ArtworkOverrides.key(mediaType, source, mediaId), image)
 }
 
 /**
@@ -444,7 +457,7 @@ data class CalendarEvent(
     @Json(name = "content_number") val contentNumber: Int? = null
 ) {
     val title: String get() = item?.title.orEmpty()
-    val image: String? get() = item?.image
+    val image: String? get() = ArtworkOverrides.resolve(item?.artworkKey, item?.image)
     val mediaType: MediaType? get() = item?.mediaType?.let { MediaType.fromValue(it) }
     val date: String? get() = datetime
     val seasonNumber: Int? get() = item?.seasonNumber
@@ -545,6 +558,11 @@ data class CreateListRequest(
     @Json(name = "collaborators") val collaborators: List<Long>? = null
 )
 
+/** Body for PUT .../cover/: one of the URLs returned by the images endpoint. */
+data class CoverUpdateRequest(
+    @Json(name = "image") val image: String
+)
+
 /**
  * Auth result for testConnection() and login flows.
  */
@@ -561,3 +579,101 @@ sealed class Result<out T> {
     data class Error(val message: String, val code: Int? = null) : Result<Nothing>()
     object Loading : Result<Nothing>()
 }
+
+/** How long to beat a game, in seconds (IGDB). Any of the three may be null. */
+data class TimeToBeat(
+    @Json(name = "hastily") val hastily: Long? = null,
+    @Json(name = "normally") val normally: Long? = null,
+    @Json(name = "completely") val completely: Long? = null
+) {
+    val isEmpty: Boolean get() = hastily == null && normally == null && completely == null
+}
+
+/** Cast member of a movie / tv serie (TMDB) or voice actor of an anime. */
+data class CastMember(
+    @Json(name = "person_id") val personId: Long? = null,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "character") val character: String? = null,
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "order") val order: Int? = null,
+    @Json(name = "episode_count") val episodeCount: Int? = null
+)
+
+/** Person details from GET /api/v1/people/{source}/{person_id}/. */
+data class Person(
+    @Json(name = "person_id") val personId: Long? = null,
+    @Json(name = "source") val source: String? = null,
+    @Json(name = "source_url") val sourceUrl: String? = null,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "biography") val biography: String? = null,
+    @Json(name = "birthday") val birthday: String? = null,
+    @Json(name = "deathday") val deathday: String? = null,
+    @Json(name = "place_of_birth") val placeOfBirth: String? = null,
+    @Json(name = "known_for_department") val knownForDepartment: String? = null,
+    @Json(name = "also_known_as") val alsoKnownAs: List<String>? = null,
+    @Json(name = "homepage") val homepage: String? = null,
+    @Json(name = "external_links") val externalLinks: Map<String, String>? = null
+)
+
+/** A movie / tv serie a person appeared in or worked on. */
+data class KnownFor(
+    @Json(name = "source") val source: String? = null,
+    @Json(name = "media_type") val mediaType: String? = null,
+    @Json(name = "media_id") val mediaId: String? = null,
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "character") val character: String? = null,
+    @Json(name = "departments") val departments: List<String>? = null,
+    @Json(name = "jobs") val jobs: List<String>? = null,
+    @Json(name = "release_date") val releaseDate: String? = null,
+    @Json(name = "episode_count") val episodeCount: Int? = null
+) {
+    val displayImage: String?
+        get() = ArtworkOverrides.resolve(ArtworkOverrides.key(mediaType, source, mediaId), image)
+}
+
+/** Watch provider (streaming / rent / buy service) logo + name. */
+data class WatchProvider(
+    @Json(name = "provider_id") val providerId: Long? = null,
+    @Json(name = "provider_name") val providerName: String? = null,
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "display_priority") val displayPriority: Int? = null
+)
+
+/** Where to watch, for the region the server resolved. */
+data class WatchProviders(
+    @Json(name = "region") val region: String? = null,
+    @Json(name = "link") val link: String? = null,
+    @Json(name = "no_charge") val noCharge: List<WatchProvider>? = null,
+    @Json(name = "paid") val paid: List<WatchProvider>? = null
+)
+
+/** A single image option from the images endpoints. */
+data class MediaImage(
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "original") val original: String? = null,
+    @Json(name = "width") val width: Int? = null,
+    @Json(name = "height") val height: Int? = null,
+    @Json(name = "aspect_ratio") val aspectRatio: Double? = null,
+    @Json(name = "vote_average") val voteAverage: Double? = null,
+    @Json(name = "vote_count") val voteCount: Int? = null,
+    @Json(name = "language") val language: String? = null
+)
+
+/**
+ * Cover of a media or season, shared by every user of the server.
+ * [customImage] is null when the provider image is in use.
+ */
+data class Cover(
+    @Json(name = "image") val image: String? = null,
+    @Json(name = "custom_image") val customImage: String? = null
+)
+
+/** Response of GET /api/v1/media/{type}/{source}/{id}/images/. */
+data class MediaImages(
+    @Json(name = "posters") val posters: List<MediaImage>? = null,
+    @Json(name = "backdrops") val backdrops: List<MediaImage>? = null,
+    @Json(name = "screenshots") val screenshots: List<MediaImage>? = null,
+    @Json(name = "logos") val logos: List<MediaImage>? = null
+)

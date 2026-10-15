@@ -14,7 +14,8 @@ import com.yamtrack.app.databinding.ItemSearchResultBinding
 
 class SearchAdapter(
     private val onItemClick: (SearchResult) -> Unit,
-    private val onAddClick: (SearchResult) -> Unit
+    private val onAddClick: (SearchResult) -> Unit,
+    private val onItemLongClick: ((SearchResult) -> Unit)? = null
 ) : ListAdapter<SearchResult, SearchAdapter.SearchViewHolder>(SearchDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SearchViewHolder {
@@ -40,6 +41,15 @@ class SearchAdapter(
                 }
             }
 
+            if (onItemLongClick != null) {
+                binding.root.setOnLongClickListener {
+                    val position = bindingAdapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        onItemLongClick.invoke(getItem(position)); true
+                    } else false
+                }
+            }
+
             binding.btnAdd.setOnClickListener {
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
@@ -59,8 +69,9 @@ class SearchAdapter(
             val year = item.year?.takeIf { it.isNotBlank() }
             binding.tvType.text = if (year != null) "$typeLabel · $year" else typeLabel
 
-            if (!item.image.isNullOrBlank()) {
-                binding.ivPoster.load(item.image) {
+            val image = item.displayImage
+            if (!image.isNullOrBlank()) {
+                binding.ivPoster.load(image) {
                     crossfade(true)
                     placeholder(R.drawable.placeholder_poster)
                     error(R.drawable.placeholder_poster)

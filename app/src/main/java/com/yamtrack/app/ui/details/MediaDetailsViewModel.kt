@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yamtrack.app.data.model.*
+import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.data.repository.YamtrackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -35,6 +36,13 @@ class MediaDetailsViewModel @Inject constructor(
     private val _seasons = MutableLiveData<List<MediaItem>>(emptyList())
     val seasons: LiveData<List<MediaItem>> = _seasons
 
+    private val _cast = MutableLiveData<List<CastMember>>(emptyList())
+    val cast: LiveData<List<CastMember>> = _cast
+
+    /** Null until loaded, or when the item has no providers in this region. */
+    private val _providers = MutableLiveData<WatchProviders?>(null)
+    val providers: LiveData<WatchProviders?> = _providers
+
     private var currentMediaType: MediaType = MediaType.MOVIE
     private var currentSource: String = "tmdb"
     private var currentMediaId: String = ""
@@ -52,16 +60,48 @@ class MediaDetailsViewModel @Inject constructor(
             if (result is Result.Success) {
                 isTracked = result.data.tracked
                 _tracked.value = isTracked
+                ArtworkOverrides.sync(result.data.artworkKey, result.data.image)
             }
         }
-        loadRecommendations()
         if (mediaType == MediaType.TV) loadSeasons()
+
+        // Recommendations, cast and providers don't change when the user
+        // edits status/score, so only fetch them once per item.
+        val key = "${mediaType.value}|$source|$mediaId"
+        if (key == extrasLoadedFor) return
+        extrasLoadedFor = key
+        loadRecommendations()
+        if (mediaType in CAST_TYPES) loadCast()
+        if (mediaType == MediaType.MOVIE || mediaType == MediaType.TV) loadProviders()
+    }
+
+    private var extrasLoadedFor: String? = null
+
+    private fun loadCast() {
+        viewModelScope.launch {
+            _cast.value = when (val r = repository.getCast(currentMediaType, currentSource, currentMediaId)) {
+                is Result.Success -> r.data.sortedBy { it.order ?: Int.MAX_VALUE }
+                else -> emptyList()
+            }
+        }
+    }
+
+    private fun loadProviders() {
+        viewModelScope.launch {
+            _providers.value = when (val r = repository.getProviders(currentMediaType, currentSource, currentMediaId)) {
+                is Result.Success -> r.data
+                else -> null
+            }
+        }
     }
 
     private fun loadSeasons() {
         viewModelScope.launch {
             _seasons.value = when (val r = repository.getSeasons(currentSource, currentMediaId)) {
-                is Result.Success -> r.data.sortedBy { it.item?.seasonNumber ?: 0 }
+                is Result.Success -> {
+                    r.data.forEach { ArtworkOverrides.sync(it.item?.artworkKey, it.item?.image) }
+                    r.data.sortedBy { it.item?.seasonNumber ?: 0 }
+                }
                 else -> emptyList()
             }
         }
@@ -208,6 +248,11 @@ class MediaDetailsViewModel @Inject constructor(
                 else -> OperationResult.Error("Unknown error")
             }
         }
+    }
+
+    companion object {
+        /** Media types the server can return a cast for. */
+        private val CAST_TYPES = setOf(MediaType.MOVIE, MediaType.TV, MediaType.ANIME)
     }
 
     sealed class OperationResult {

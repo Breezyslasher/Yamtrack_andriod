@@ -12,6 +12,7 @@ import com.yamtrack.app.R
 import com.yamtrack.app.data.model.CalendarEvent
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.FragmentCalendarBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -55,6 +56,10 @@ class CalendarFragment : Fragment() {
     }
 
     private fun observe() {
+        ArtworkOverrides.version.observe(viewLifecycleOwner) {
+            adapter.notifyDataSetChanged()
+        }
+
         viewModel.events.observe(viewLifecycleOwner) { result ->
             when (result) {
                 is Result.Success -> {
