@@ -153,10 +153,13 @@ class MediaDetailsActivity : AppCompatActivity() {
         )
     }
 
-    /** TMDB only gives one region-wide "where to watch" link, not per-service deep links. */
-    @Suppress("UNUSED_PARAMETER")
+    /**
+     * Opens the provider's direct link to this title when the server has
+     * JustWatch links enabled; otherwise (or for the header) TMDB's
+     * region-wide "where to watch" page.
+     */
     private fun openProvidersLink(provider: WatchProvider?) {
-        val link = providersLink ?: return
+        val link = provider?.link?.takeIf { it.isNotBlank() } ?: providersLink ?: return
         runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) }
             .onFailure {
                 Toast.makeText(this, R.string.could_not_open_browser, Toast.LENGTH_SHORT).show()

@@ -1,6 +1,7 @@
 package com.yamtrack.app.ui.details
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -32,6 +33,16 @@ class ProvidersAdapter(
         fun bind(provider: WatchProvider) {
             binding.tvName.text = provider.providerName.orEmpty()
             binding.root.contentDescription = provider.providerName
+
+            val context = binding.root.context
+            val prices = listOfNotNull(
+                provider.rentPrice?.takeIf { it.isNotBlank() }
+                    ?.let { context.getString(R.string.provider_rent_price, it) },
+                provider.buyPrice?.takeIf { it.isNotBlank() }
+                    ?.let { context.getString(R.string.provider_buy_price, it) }
+            )
+            binding.tvPrice.text = prices.joinToString("\n")
+            binding.tvPrice.visibility = if (prices.isEmpty()) View.GONE else View.VISIBLE
             if (!provider.image.isNullOrBlank()) {
                 binding.ivLogo.load(provider.image) {
                     crossfade(true)

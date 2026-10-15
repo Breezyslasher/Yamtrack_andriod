@@ -27,4 +27,14 @@
         android:maxLines="2"
         android:textColor="@color/text_secondary"
         android:textSize="11sp" />
+
+    <TextView
+        android:id="@+id/tvPrice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="@color/text_secondary"
+        android:textSize="10sp"
+        android:visibility="gone" />
 </LinearLayout>

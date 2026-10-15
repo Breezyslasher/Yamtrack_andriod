@@ -638,7 +638,12 @@ data class WatchProvider(
     @Json(name = "provider_id") val providerId: Long? = null,
     @Json(name = "provider_name") val providerName: String? = null,
     @Json(name = "image") val image: String? = null,
-    @Json(name = "display_priority") val displayPriority: Int? = null
+    @Json(name = "display_priority") val displayPriority: Int? = null,
+    /** Direct link to the title on this service (JustWatch); null unless the server enables it. */
+    @Json(name = "link") val link: String? = null,
+    /** Formatted prices, e.g. "$3.99" (JustWatch). */
+    @Json(name = "buy_price") val buyPrice: String? = null,
+    @Json(name = "rent_price") val rentPrice: String? = null
 )
 
 /** Where to watch, for the region the server resolved. */
