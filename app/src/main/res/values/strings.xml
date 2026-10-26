@@ -162,6 +162,8 @@
     <string name="where_to_watch">Where to watch</string>
     <string name="providers_stream">Stream</string>
     <string name="providers_rent_buy">Rent or buy</string>
+    <string name="provider_rent_price">Rent %1$s</string>
+    <string name="provider_buy_price">Buy %1$s</string>
 
     <!-- How long to beat -->
     <string name="time_to_beat">How long to beat</string>
