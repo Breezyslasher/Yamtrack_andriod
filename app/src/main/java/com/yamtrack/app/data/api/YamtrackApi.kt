@@ -192,6 +192,33 @@ interface YamtrackApi {
         @Body request: UpdateMediaRequest
     ): Response<MediaDetails>
 
+    /**
+     * Track a season of a tracked tv serie (400 when the serie isn't
+     * tracked, 409 when the season already is). Body is discarded.
+     */
+    @POST("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/")
+    suspend fun trackSeason(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("season_number") seasonNumber: Int,
+        @Body request: UpdateMediaRequest
+    ): Response<Unit>
+
+    /**
+     * Track a new watch of an episode of a tracked season (400 when the
+     * season isn't tracked). `end_date` defaults to today. Body is discarded.
+     */
+    @POST("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/{episode_number}/")
+    suspend fun trackEpisode(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("season_number") seasonNumber: Int,
+        @Path("episode_number") episodeNumber: Int,
+        @Body request: UpdateMediaRequest
+    ): Response<Unit>
+
     /** Untrack (mark unwatched) an episode. */
     @DELETE("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/{episode_number}/")
     suspend fun deleteEpisode(
