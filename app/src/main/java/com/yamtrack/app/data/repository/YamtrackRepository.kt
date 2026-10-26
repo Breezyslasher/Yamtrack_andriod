@@ -309,7 +309,7 @@ class YamtrackRepository @Inject constructor(
      * Episodes live as children of the tv serie at
      * `/api/v1/media/tv/{source}/{id}/{season}/{episode}/`.
      *
-     *  - watched  -> PATCH end_date = today when the episode is already
+     *  - watched  -> PATCH end_date = now when the episode is already
      *                tracked. When it isn't (404), POST a new tracking; the
      *                server only accepts that under a tracked season, which
      *                in turn needs a tracked serie, so those are created
@@ -326,23 +326,28 @@ class YamtrackRepository @Inject constructor(
         if (!watched) {
             return deleteEpisode(source, mediaId, seasonNumber, episodeNumber)
         }
-        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        // The full time, not just the date: a date alone is stored as
+        // midnight, and the serie's "recently updated" position is its latest
+        // episode's watch time, so it would sort below anything else updated
+        // that day. The offset keeps it correct whatever the server timezone.
+        val watchedAt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US)
             .format(java.util.Date())
         val patched = updateEpisode(
             source, mediaId, seasonNumber, episodeNumber,
-            UpdateMediaRequest(endDate = today)
+            UpdateMediaRequest(endDate = watchedAt)
         )
         if (patched is Result.Success) return Result.Success(Unit)
         if (patched !is Result.Error) return Result.Error("Unknown error")
         if (patched.code != 404) return patched
 
-        // Not tracked yet: create it (end_date defaults to today server-side).
-        var created = trackEpisode(source, mediaId, seasonNumber, episodeNumber)
+        // Not tracked yet: create it. Sent explicitly, as the server's default
+        // end_date is today's date only (midnight).
+        var created = trackEpisode(source, mediaId, seasonNumber, episodeNumber, watchedAt)
         if (created is Result.Error && created.code == 400) {
             // "Parent season is not tracked yet."
             val season = ensureSeasonTracked(source, mediaId, seasonNumber)
             if (season is Result.Error) return season
-            created = trackEpisode(source, mediaId, seasonNumber, episodeNumber)
+            created = trackEpisode(source, mediaId, seasonNumber, episodeNumber, watchedAt)
         }
         if (created is Result.Error && created.code == 405) {
             return Result.Error(
@@ -359,11 +364,12 @@ class YamtrackRepository @Inject constructor(
         source: String,
         mediaId: String,
         seasonNumber: Int,
-        episodeNumber: Int
+        episodeNumber: Int,
+        endDate: String
     ): Result<Unit> = apiCall {
         api.trackEpisode(
             MediaType.TV.value, source, mediaId, seasonNumber, episodeNumber,
-            UpdateMediaRequest()
+            UpdateMediaRequest(endDate = endDate)
         )
     }
 
