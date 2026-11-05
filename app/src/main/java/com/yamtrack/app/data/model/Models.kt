@@ -188,11 +188,12 @@ data class MediaDetails(
     /**
      * Human label for when the title aired/released. Provider metadata keys
      * vary (TMDB/MAL/IGDB/…) and arrive in the opaque `details` map, so we
-     * probe a range of common keys and collapse to "2011" or "2011 - 2013".
+     * probe a range of common keys, e.g. "Nov 9, 2012" or
+     * "Sep 3, 2015 – May 2, 2019" (a year alone stays a year).
      */
     val releaseLabel: String? get() = MediaMeta.releaseLabel(details)
 
-    /** Episode/movie length in minutes if the provider exposed it. */
+    /** Movie / episode length ("2h 30m", "56 min"); a tv serie's is per episode. */
     val runtimeLabel: String? get() = MediaMeta.runtimeLabel(details)
 
     /** When the user last logged progress for this item. */
@@ -213,17 +214,35 @@ object MediaMeta {
         Regex("""\d{4}""").find(s)?.value
     }
 
+    /**
+     * "2012-11-09" -> the device locale's medium date ("Nov 9, 2012").
+     * A year or year-month alone ("2012", "2012-11") is returned as is.
+     */
+    private fun fullDate(v: Any?): String? {
+        val s = str(v) ?: return null
+        val ymd = Regex("""(\d{4})-(\d{2})-(\d{2})""").find(s)
+            ?: return Regex("""\d{4}(-\d{2})?""").find(s)?.value
+        val (y, m, d) = ymd.destructured
+        return runCatching {
+            val cal = java.util.Calendar.getInstance().apply {
+                clear()
+                set(y.toInt(), m.toInt() - 1, d.toInt())
+            }
+            java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(cal.time)
+        }.getOrDefault(ymd.value)
+    }
+
     fun releaseLabel(details: Map<String, Any?>?): String? {
         if (details == null) return null
-        val start = year(details["start_year"]) ?: year(details["first_air_date"])
-            ?: year(details["release_date"]) ?: year(details["air_date"])
-            ?: year(details["start_date"]) ?: year(details["year"])
-        val end = year(details["end_year"]) ?: year(details["last_air_date"])
-            ?: year(details["end_date"])
+        val start = fullDate(details["first_air_date"]) ?: fullDate(details["release_date"])
+            ?: fullDate(details["air_date"]) ?: fullDate(details["start_date"])
+            ?: year(details["start_year"]) ?: year(details["year"])
+        val end = fullDate(details["last_air_date"]) ?: fullDate(details["end_date"])
+            ?: year(details["end_year"])
         return when {
             start == null -> null
             end == null || end == start -> start
-            else -> "$start - $end"
+            else -> "$start – $end"
         }
     }
 
@@ -237,6 +256,11 @@ object MediaMeta {
         if (details == null) return null
         val mins = listOf("runtime", "length", "duration", "episode_runtime")
             .firstNotNullOfOrNull { details[it] }
+        // TMDB details arrive already formatted by the server ("2h 30m",
+        // "45m"); other sources give plain minutes.
+        if (mins is String && mins.isNotBlank() && mins.trim().toIntOrNull() == null) {
+            return mins.trim()
+        }
         val n = when (mins) {
             is Number -> mins.toInt()
             is String -> mins.trim().toIntOrNull()

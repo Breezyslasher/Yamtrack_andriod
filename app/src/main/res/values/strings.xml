@@ -165,6 +165,8 @@
     <string name="provider_rent_price">Rent %1$s</string>
     <string name="provider_buy_price">Buy %1$s</string>
 
+    <string name="runtime_per_episode">%1$s per episode</string>
+
     <!-- How long to beat -->
     <string name="time_to_beat">How long to beat</string>
     <string name="time_to_beat_hastily">Main story</string>
