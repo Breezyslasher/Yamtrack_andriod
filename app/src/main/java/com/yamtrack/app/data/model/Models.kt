@@ -101,12 +101,12 @@ data class Item(
 }
 
 /**
- * Membership entry returned in the `lists` array of MediaItem.
- * Format from CustomListItem.objects.get_user_item_lists.
+ * Membership entry returned in the `lists` array of MediaItem / MediaDetails
+ * (ListMinimizedSerializer): which list holds the item, and the entry's id.
  */
 data class MediaListMembership(
-    @Json(name = "id") val id: Long? = null,
-    @Json(name = "name") val name: String? = null
+    @Json(name = "list_id") val listId: Long? = null,
+    @Json(name = "list_item_id") val listItemId: Long? = null
 )
 
 /**
@@ -483,7 +483,8 @@ data class CalendarEvent(
     val title: String get() = item?.title.orEmpty()
     val image: String? get() = ArtworkOverrides.resolve(item?.artworkKey, item?.image)
     val mediaType: MediaType? get() = item?.mediaType?.let { MediaType.fromValue(it) }
-    val date: String? get() = datetime
+    /** The event's day on this device, "yyyy-MM-dd" (see [CalendarDates]). */
+    val date: String? get() = CalendarDates.localDate(datetime)
     val seasonNumber: Int? get() = item?.seasonNumber
     val episodeNumber: Int? get() = item?.episodeNumber ?: contentNumber
 }
@@ -586,6 +587,30 @@ data class CreateListRequest(
 data class CoverUpdateRequest(
     @Json(name = "image") val image: String
 )
+
+/**
+ * Calendar event datetimes come in UTC ("...T21:30:00Z"); taking the first
+ * ten characters would put a late airing on the wrong day for anyone not on
+ * UTC. Events without a time of their own carry the server's sentinel time,
+ * 11:59:59.999999 UTC, and keep their date as is.
+ */
+object CalendarDates {
+    private val SENTINEL = Regex("""T11:59:59(\.9+)?(Z|\+00:00)$""")
+    private val ISO = Regex("""^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2})$""")
+
+    fun localDate(raw: String?): String? {
+        if (raw.isNullOrBlank()) return null
+        if (SENTINEL.containsMatchIn(raw)) return raw.take(10)
+        val match = ISO.find(raw) ?: return raw.take(10)
+        val (dateTime, _, zone) = match.destructured
+        return runCatching {
+            val parsed = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US)
+                .parse(dateTime + zone)
+            // Formats in the device's timezone.
+            parsed?.let { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(it) }
+        }.getOrNull() ?: raw.take(10)
+    }
+}
 
 /**
  * Auth result for testConnection() and login flows.

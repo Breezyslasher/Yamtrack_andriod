@@ -292,7 +292,7 @@ class MediaDetailsActivity : AppCompatActivity() {
             return
         }
         val containingIds = current?.lists.orEmpty()
-            .mapNotNull { it.id }.toHashSet()
+            .mapNotNull { it.listId }.toHashSet()
 
         lifecycleScope.launchWhenStarted {
             val all = viewModel.fetchUserLists()

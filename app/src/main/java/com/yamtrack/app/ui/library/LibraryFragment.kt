@@ -150,7 +150,7 @@ class LibraryFragment : Fragment() {
                 return@launch
             }
             val names = lists.map { it.name }.toTypedArray()
-            val memberIds = item.lists?.mapNotNull { it.id }?.toSet().orEmpty()
+            val memberIds = item.lists?.mapNotNull { it.listId }?.toSet().orEmpty()
             val checked = BooleanArray(lists.size) { i -> lists[i].id in memberIds }
             val initial = checked.copyOf()
 
