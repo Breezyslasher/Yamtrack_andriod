@@ -667,7 +667,12 @@ data class WatchProvider(
     @Json(name = "link") val link: String? = null,
     /** Formatted prices, e.g. "$3.99" (JustWatch). */
     @Json(name = "buy_price") val buyPrice: String? = null,
-    @Json(name = "rent_price") val rentPrice: String? = null
+    @Json(name = "rent_price") val rentPrice: String? = null,
+    /** Video quality (SD, HD or 4K) of each price, per the user's server preference. */
+    @Json(name = "buy_quality") val buyQuality: String? = null,
+    @Json(name = "rent_quality") val rentQuality: String? = null,
+    /** Every price by quality, e.g. {"rent": {"SD": "$3.99"}, "buy": {"HD": "$14.99"}}. */
+    @Json(name = "prices") val prices: Map<String, Map<String, String>>? = null
 )
 
 /** Where to watch, for the region the server resolved. */
