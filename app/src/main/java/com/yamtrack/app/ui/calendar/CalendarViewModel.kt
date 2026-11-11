@@ -51,7 +51,7 @@ class CalendarViewModel @Inject constructor(
                     // range can still include earlier same-month entries.
                     val upcoming = res.data
                         .filter { (it.date?.take(10) ?: "") >= todayKey }
-                        .sortedBy { it.date.orEmpty() }
+                        .sortedBy { it.datetime.orEmpty() }
                     Result.Success(upcoming)
                 } else res
             }

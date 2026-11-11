@@ -35,11 +35,19 @@ class ProvidersAdapter(
             binding.root.contentDescription = provider.providerName
 
             val context = binding.root.context
+            // "Rent $3.99 (HD)": the quality comes from the server's price
+            // quality preference (JustWatch); older servers send none.
+            fun withQuality(price: String, quality: String?) =
+                quality?.takeIf { it.isNotBlank() }
+                    ?.let { context.getString(R.string.provider_price_quality, price, it) }
+                    ?: price
             val prices = listOfNotNull(
-                provider.rentPrice?.takeIf { it.isNotBlank() }
-                    ?.let { context.getString(R.string.provider_rent_price, it) },
-                provider.buyPrice?.takeIf { it.isNotBlank() }
-                    ?.let { context.getString(R.string.provider_buy_price, it) }
+                provider.rentPrice?.takeIf { it.isNotBlank() }?.let {
+                    context.getString(R.string.provider_rent_price, withQuality(it, provider.rentQuality))
+                },
+                provider.buyPrice?.takeIf { it.isNotBlank() }?.let {
+                    context.getString(R.string.provider_buy_price, withQuality(it, provider.buyQuality))
+                }
             )
             binding.tvPrice.text = prices.joinToString("\n")
             binding.tvPrice.visibility = if (prices.isEmpty()) View.GONE else View.VISIBLE

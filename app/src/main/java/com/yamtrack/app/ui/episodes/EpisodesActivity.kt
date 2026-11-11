@@ -45,11 +45,11 @@ class EpisodesActivity : AppCompatActivity() {
         }
         adapter = EpisodesAdapter(
             scope = lifecycleScope,
-            titleFor = { epNum, ep ->
+            titleFor = { epNum, name ->
                 getString(
                     R.string.episode_title_format,
                     epNum,
-                    ep.title.ifBlank { getString(R.string.episode_fallback_name, epNum) }
+                    name.ifBlank { getString(R.string.episode_fallback_name, epNum) }
                 )
             },
             hiddenTitleFor = { epNum -> getString(R.string.episode_hidden_title, epNum) },
@@ -97,16 +97,20 @@ class EpisodesActivity : AppCompatActivity() {
         viewModel.load(source, mediaId, seasonNumber)
     }
 
-    /** Release date · runtime, then a description on the next line. */
-    private suspend fun episodeDetailLine(epNum: Int): String? {
+    /**
+     * The episode's own name (the details endpoint titles it after the
+     * episode), plus release date · runtime and a description below.
+     */
+    private suspend fun episodeDetailLine(epNum: Int): EpisodesAdapter.EpisodeDetail? {
         val d = viewModel.episodeDetail(epNum) ?: return null
         val header = listOfNotNull(
             MediaMeta.releaseDate(d.details),
             d.runtimeLabel
         ).joinToString(" · ")
         val desc = d.synopsis?.takeIf { it.isNotBlank() }
-        return listOfNotNull(header.takeIf { it.isNotBlank() }, desc)
+        val line = listOfNotNull(header.takeIf { it.isNotBlank() }, desc)
             .joinToString("\n")
             .takeIf { it.isNotBlank() }
+        return EpisodesAdapter.EpisodeDetail(name = d.title, line = line)
     }
 }

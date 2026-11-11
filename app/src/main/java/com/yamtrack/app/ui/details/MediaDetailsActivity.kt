@@ -292,7 +292,7 @@ class MediaDetailsActivity : AppCompatActivity() {
             return
         }
         val containingIds = current?.lists.orEmpty()
-            .mapNotNull { it.id }.toHashSet()
+            .mapNotNull { it.listId }.toHashSet()
 
         lifecycleScope.launchWhenStarted {
             val all = viewModel.fetchUserLists()
@@ -475,10 +475,17 @@ class MediaDetailsActivity : AppCompatActivity() {
             bindPoster(item)
             bindTimeToBeat(item.timeToBeat)
 
-            // Release year / air-date range, e.g. "2011" or "2011 - 2013".
-            val release = item.releaseLabel
-            if (!release.isNullOrBlank()) {
-                tvReleaseDate.text = release
+            // Release date (or air-date range) and runtime, e.g.
+            // "Nov 9, 2012 · 2h 30m" or "Sep 3, 2015 – May 2, 2019 · 45m per episode".
+            val runtime = item.runtimeLabel?.let {
+                if (item.type == MediaType.TV) getString(R.string.runtime_per_episode, it) else it
+            }
+            val releaseLine = listOfNotNull(
+                item.releaseLabel?.takeIf { it.isNotBlank() },
+                runtime?.takeIf { it.isNotBlank() }
+            ).joinToString(" · ")
+            if (releaseLine.isNotEmpty()) {
+                tvReleaseDate.text = releaseLine
                 tvReleaseDate.visibility = View.VISIBLE
             } else {
                 tvReleaseDate.visibility = View.GONE

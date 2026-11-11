@@ -47,7 +47,15 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         observeViewModel()
         setupSwipeRefresh()
+    }
 
+    /**
+     * Load on every resume, not just on view creation: details and episode
+     * screens open on top of Home, so coming back from marking something
+     * watched must refresh the "recently updated" order.
+     */
+    override fun onResume() {
+        super.onResume()
         viewModel.loadData()
     }
 

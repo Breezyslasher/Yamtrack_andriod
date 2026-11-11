@@ -185,7 +185,7 @@ private class CalendarRemoteViewsFactory(
         )
         return (result as? Result.Success)?.data
             ?.filter { (it.date?.take(10) ?: "") >= todayStr }
-            ?.sortedBy { it.date.orEmpty() }
+            ?.sortedBy { it.datetime.orEmpty() }
             ?.take(30)
     }
 
