@@ -60,6 +60,9 @@ class ArtworkPicker @Inject constructor(
         }
     }
 
+    /** Whether the server supports changing artwork; offer the option only then. */
+    suspend fun isAvailable(): Boolean = repository.supportsArtwork()
+
     /** Fetches the options, then shows the picker. [scope] should be tied to [context]'s lifecycle. */
     fun show(context: Context, scope: CoroutineScope, target: Target) {
         scope.launch {

@@ -120,20 +120,27 @@ class LibraryFragment : Fragment() {
             showListsDialog(item)
             return
         }
-        val actions = arrayOf(getString(R.string.change_artwork), getString(R.string.add_to_list))
-        AlertDialog.Builder(requireContext())
-            .setTitle(item.title.ifBlank { null })
-            .setItems(actions) { _, which ->
-                when (which) {
-                    0 -> artworkPicker.show(
-                        requireContext(),
-                        viewLifecycleOwner.lifecycleScope,
-                        target
-                    )
-                    1 -> showListsDialog(item)
-                }
+        viewLifecycleOwner.lifecycleScope.launch {
+            // No artwork endpoints on this server: lists are the only action.
+            if (!artworkPicker.isAvailable()) {
+                showListsDialog(item)
+                return@launch
             }
-            .show()
+            val actions = arrayOf(getString(R.string.change_artwork), getString(R.string.add_to_list))
+            AlertDialog.Builder(requireContext())
+                .setTitle(item.title.ifBlank { null })
+                .setItems(actions) { _, which ->
+                    when (which) {
+                        0 -> artworkPicker.show(
+                            requireContext(),
+                            viewLifecycleOwner.lifecycleScope,
+                            target
+                        )
+                        1 -> showListsDialog(item)
+                    }
+                }
+                .show()
+        }
     }
 
     /** Choose which user lists this item

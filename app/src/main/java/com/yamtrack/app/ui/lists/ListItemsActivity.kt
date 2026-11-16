@@ -18,6 +18,7 @@ import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import com.yamtrack.app.ui.home.MediaAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -107,19 +108,26 @@ class ListItemsActivity : AppCompatActivity() {
             confirmRemove(item)
             return
         }
-        val actions = arrayOf(
-            getString(R.string.change_artwork),
-            getString(R.string.remove_from_list_title)
-        )
-        AlertDialog.Builder(this)
-            .setTitle(item.title.ifBlank { null })
-            .setItems(actions) { _, which ->
-                when (which) {
-                    0 -> artworkPicker.show(this, lifecycleScope, target)
-                    1 -> confirmRemove(item)
-                }
+        lifecycleScope.launch {
+            // No artwork endpoints on this server: removing is the only action.
+            if (!artworkPicker.isAvailable()) {
+                confirmRemove(item)
+                return@launch
             }
-            .show()
+            val actions = arrayOf(
+                getString(R.string.change_artwork),
+                getString(R.string.remove_from_list_title)
+            )
+            AlertDialog.Builder(this@ListItemsActivity)
+                .setTitle(item.title.ifBlank { null })
+                .setItems(actions) { _, which ->
+                    when (which) {
+                        0 -> artworkPicker.show(this@ListItemsActivity, lifecycleScope, target)
+                        1 -> confirmRemove(item)
+                    }
+                }
+                .show()
+        }
     }
 
     private fun confirmRemove(item: MediaItem) {

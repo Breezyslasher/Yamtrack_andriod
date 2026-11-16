@@ -22,6 +22,7 @@ import com.yamtrack.app.databinding.SectionMediaGroupBinding
 import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -89,7 +90,13 @@ class HomeFragment : Fragment() {
             Toast.makeText(requireContext(), R.string.artwork_unsupported, Toast.LENGTH_SHORT).show()
             return
         }
-        artworkPicker.show(requireContext(), viewLifecycleOwner.lifecycleScope, target)
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (artworkPicker.isAvailable()) {
+                artworkPicker.show(requireContext(), viewLifecycleOwner.lifecycleScope, target)
+            } else {
+                Toast.makeText(requireContext(), R.string.artwork_server_unsupported, Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun rebindRails(container: LinearLayout) {
