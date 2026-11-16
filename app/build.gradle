@@ -12,7 +12,10 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.yamtrack.app"
+        // The ID on Google Play, permanent once published. The app is an
+        // unofficial client, so it lives under the author's namespace rather
+        // than Yamtrack's (the Kotlin code keeps its com.yamtrack.app package).
+        applicationId "io.github.breezyslasher.yamtrack"
         minSdk 24
         targetSdk 36
         // versionName is the single source of truth for the app version;
@@ -92,7 +95,7 @@ android {
             // fall back to the always-available debug keystore so the
             // APK is at least signed and installable.
             signingConfig hasSharedSigning ? signingConfigs.shared : signingConfigs.debug
-            resValue "string", "app_name", "Yamtrack"
+            resValue "string", "app_name", "Yamtrack Unofficial"
         }
         debug {
             minifyEnabled false
@@ -109,7 +112,7 @@ android {
             // back to "-debug" for local builds.
             def runNumber = System.getenv("GITHUB_RUN_NUMBER")
             versionNameSuffix runNumber ? ".${runNumber}" : "-debug"
-            resValue "string", "app_name", "Yamtrack Debug"
+            resValue "string", "app_name", "Yamtrack Unofficial Debug"
         }
     }
 
