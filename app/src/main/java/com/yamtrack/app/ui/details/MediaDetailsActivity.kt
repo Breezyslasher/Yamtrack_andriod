@@ -32,6 +32,7 @@ import com.yamtrack.app.databinding.ActivityMediaDetailsBinding
 import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.person.PersonActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -55,6 +56,9 @@ class MediaDetailsActivity : AppCompatActivity() {
     private val viewModel: MediaDetailsViewModel by viewModels()
 
     @Inject lateinit var artworkPicker: ArtworkPicker
+
+    /** Until the server is asked, assume it can (the picker reports any error). */
+    private var artworkAvailable = true
 
     private lateinit var mediaType: MediaType
     private lateinit var source: String
@@ -107,7 +111,10 @@ class MediaDetailsActivity : AppCompatActivity() {
             seasonCardWidth,
             onClick = { season -> openEpisodes(season) },
             onLongClick = { season ->
-                season.item?.seasonNumber?.let { showArtworkPicker(it) }
+                season.item?.seasonNumber?.let { number ->
+                    if (artworkAvailable) showArtworkPicker(number)
+                    else Toast.makeText(this, R.string.artwork_server_unsupported, Toast.LENGTH_SHORT).show()
+                }
             }
         )
         binding.rvSeasons.apply {
@@ -220,11 +227,13 @@ class MediaDetailsActivity : AppCompatActivity() {
             showScoreDialog()
         }
         // Tap the poster to pick new artwork; long-press for all actions.
-        binding.ivPoster.setOnClickListener { showArtworkPicker() }
+        // Artwork is offered only when the server has the endpoints for it.
+        lifecycleScope.launch { artworkAvailable = artworkPicker.isAvailable() }
+        binding.ivPoster.setOnClickListener { if (artworkAvailable) showArtworkPicker() }
         binding.ivPoster.isLongClickable = true
         binding.ivPoster.setOnLongClickListener { anchor ->
             android.widget.PopupMenu(this, anchor).apply {
-                menu.add(0, MENU_CHANGE_ARTWORK, 0, R.string.change_artwork)
+                if (artworkAvailable) menu.add(0, MENU_CHANGE_ARTWORK, 0, R.string.change_artwork)
                 menu.add(0, MENU_ADD_TO_LIST, 1, R.string.add_to_list)
                 setOnMenuItemClickListener { item ->
                     when (item.itemId) {

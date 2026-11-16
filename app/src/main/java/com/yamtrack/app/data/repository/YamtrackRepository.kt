@@ -526,6 +526,27 @@ class YamtrackRepository @Inject constructor(
         return apiCall { api.getProviders(mediaType.value, source, mediaId, country) }
     }
 
+    /** Server URL -> whether it has the artwork (images + cover) endpoints. */
+    private val artworkSupport = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    /**
+     * Whether this server can list and save artwork. The images and cover
+     * endpoints come from a Yamtrack fork; upstream servers don't have them.
+     * Asked once per server with OPTIONS on an images URL: 404 means the route
+     * doesn't exist, any other reply means it does. A failed request counts as
+     * supported (the picker then shows its own error) and is asked again later.
+     */
+    suspend fun supportsArtwork(): Boolean {
+        val server = baseUrlProvider.getBaseUrl().orEmpty()
+        artworkSupport[server]?.let { return it }
+        val code = withContext(Dispatchers.IO) {
+            runCatching {
+                api.probeMediaImages(MediaType.MOVIE.value, Sources.TMDB, "603").code()
+            }.getOrNull()
+        } ?: return true
+        return (code != 404).also { artworkSupport[server] = it }
+    }
+
     /** Images of a media, or of one of its seasons when [seasonNumber] is set. */
     suspend fun getArtworkImages(
         mediaType: MediaType,

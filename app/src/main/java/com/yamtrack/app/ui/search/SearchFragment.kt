@@ -12,6 +12,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
+import com.yamtrack.app.R
 import com.yamtrack.app.data.model.MediaType
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.repository.ArtworkOverrides
@@ -19,6 +20,7 @@ import com.yamtrack.app.databinding.FragmentSearchBinding
 import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -69,11 +71,19 @@ class SearchFragment : Fragment() {
                 val type = result.type ?: return@SearchAdapter
                 val source = result.source ?: return@SearchAdapter
                 val mediaId = result.mediaId ?: return@SearchAdapter
-                artworkPicker.show(
-                    requireContext(),
-                    viewLifecycleOwner.lifecycleScope,
-                    ArtworkPicker.Target(type, source, mediaId)
-                )
+                viewLifecycleOwner.lifecycleScope.launch {
+                    if (artworkPicker.isAvailable()) {
+                        artworkPicker.show(
+                            requireContext(),
+                            viewLifecycleOwner.lifecycleScope,
+                            ArtworkPicker.Target(type, source, mediaId)
+                        )
+                    } else {
+                        Toast.makeText(
+                            requireContext(), R.string.artwork_server_unsupported, Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             }
         )
 

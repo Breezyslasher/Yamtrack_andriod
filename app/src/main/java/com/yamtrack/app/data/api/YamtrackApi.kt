@@ -273,6 +273,18 @@ interface YamtrackApi {
         @Query("type") type: String? = null
     ): Response<MediaImages>
 
+    /**
+     * Whether the images route exists at all (see
+     * YamtrackRepository.supportsArtwork): OPTIONS doesn't run the view, so
+     * nothing is fetched from the provider. 404 = no such route.
+     */
+    @OPTIONS("api/v1/media/{media_type}/{source}/{media_id}/images/")
+    suspend fun probeMediaImages(
+        @Path("media_type") mediaType: String,
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String
+    ): Response<Unit>
+
     @GET("api/v1/media/{media_type}/{source}/{media_id}/{season_number}/images/")
     suspend fun getSeasonImages(
         @Path("media_type") mediaType: String,
