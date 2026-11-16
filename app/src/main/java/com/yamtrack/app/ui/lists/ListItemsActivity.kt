@@ -17,6 +17,7 @@ import com.yamtrack.app.databinding.ActivityListItemsBinding
 import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.details.MediaDetailsActivity
 import com.yamtrack.app.ui.home.MediaAdapter
+import com.yamtrack.app.util.fitContentToSystemBars
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -44,6 +45,7 @@ class ListItemsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityListItemsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        fitContentToSystemBars()
 
         val listId = intent.getLongExtra(EXTRA_LIST_ID, -1)
         if (listId < 0) return finish()

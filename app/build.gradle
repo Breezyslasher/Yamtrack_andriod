@@ -7,16 +7,24 @@ plugins {
 
 android {
     namespace 'com.yamtrack.app'
-    compileSdk 34
+    // Google Play requires a recent targetSdk for new apps and updates
+    // (it rises every August); compileSdk follows it.
+    compileSdk 36
 
     defaultConfig {
-        applicationId "com.yamtrack.app"
+        // The ID on Google Play, permanent once published. The app is an
+        // unofficial client, so it lives under the author's namespace rather
+        // than Yamtrack's (the Kotlin code keeps its com.yamtrack.app package).
+        applicationId "io.github.breezyslasher.yamtrack"
         minSdk 24
-        targetSdk 34
-        // Single source of truth for the app version. Bump these per
-        // release (CI no longer rewrites them). versionCode must not
-        // decrease or installs will refuse to downgrade.
-        versionCode 2
+        targetSdk 36
+        // versionName is the single source of truth for the app version;
+        // bump it per release. versionCode must go up with every Play
+        // upload (and never decrease, or installs refuse to downgrade), so
+        // CI builds use the workflow run number. Local builds keep 2: never
+        // upload those to Play.
+        def ciRunNumber = System.getenv("GITHUB_RUN_NUMBER")
+        versionCode ciRunNumber ? ciRunNumber.toInteger() : 2
         versionName "Beta 0.0.7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -87,7 +95,7 @@ android {
             // fall back to the always-available debug keystore so the
             // APK is at least signed and installable.
             signingConfig hasSharedSigning ? signingConfigs.shared : signingConfigs.debug
-            resValue "string", "app_name", "Yamtrack"
+            resValue "string", "app_name", "Yamtrack Unofficial"
         }
         debug {
             minifyEnabled false
@@ -104,7 +112,7 @@ android {
             // back to "-debug" for local builds.
             def runNumber = System.getenv("GITHUB_RUN_NUMBER")
             versionNameSuffix runNumber ? ".${runNumber}" : "-debug"
-            resValue "string", "app_name", "Yamtrack Debug"
+            resValue "string", "app_name", "Yamtrack Unofficial Debug"
         }
     }
 

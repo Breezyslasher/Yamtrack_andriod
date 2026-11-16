@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- app_name is provided per build type via resValue in build.gradle
-         so debug ("Yamtrack Debug") and release can install side by side. -->
+         so debug ("Yamtrack Unofficial Debug") and release can install side by side. -->
 
     <!-- Login -->
     <string name="login">Login</string>

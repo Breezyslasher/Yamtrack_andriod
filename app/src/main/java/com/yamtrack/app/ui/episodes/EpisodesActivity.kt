@@ -10,6 +10,7 @@ import com.yamtrack.app.R
 import com.yamtrack.app.data.model.MediaMeta
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.databinding.ActivityEpisodesBinding
+import com.yamtrack.app.util.fitContentToSystemBars
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -30,6 +31,7 @@ class EpisodesActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityEpisodesBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        fitContentToSystemBars()
 
         val source = intent.getStringExtra(EXTRA_SOURCE) ?: return finish()
         val mediaId = intent.getStringExtra(EXTRA_MEDIA_ID) ?: return finish()

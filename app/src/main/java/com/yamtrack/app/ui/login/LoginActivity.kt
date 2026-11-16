@@ -12,6 +12,7 @@ import com.yamtrack.app.BuildConfig
 import com.yamtrack.app.MainActivity
 import com.yamtrack.app.R
 import com.yamtrack.app.databinding.ActivityLoginBinding
+import com.yamtrack.app.util.fitContentToSystemBars
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -31,6 +32,7 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        fitContentToSystemBars()
 
         setupUI()
         observeViewModel()
