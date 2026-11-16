@@ -17,7 +17,7 @@ android {
         // release (CI no longer rewrites them). versionCode must not
         // decrease or installs will refuse to downgrade.
         versionCode 2
-        versionName "Beta 0.0.6"
+        versionName "Beta 0.0.7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
