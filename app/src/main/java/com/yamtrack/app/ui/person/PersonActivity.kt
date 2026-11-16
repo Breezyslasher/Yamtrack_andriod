@@ -16,6 +16,7 @@ import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.ActivityPersonBinding
 import com.yamtrack.app.ui.details.MediaDetailsActivity
+import com.yamtrack.app.util.fitContentToSystemBars
 import dagger.hilt.android.AndroidEntryPoint
 
 /** Person page: photo, bio, and a grid of what they're known for. */
@@ -36,6 +37,7 @@ class PersonActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPersonBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        fitContentToSystemBars()
 
         val source = intent.getStringExtra(EXTRA_SOURCE) ?: return finish()
         val personId = intent.getLongExtra(EXTRA_PERSON_ID, -1L)

@@ -7,16 +7,21 @@ plugins {
 
 android {
     namespace 'com.yamtrack.app'
-    compileSdk 34
+    // Google Play requires a recent targetSdk for new apps and updates
+    // (it rises every August); compileSdk follows it.
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.yamtrack.app"
         minSdk 24
-        targetSdk 34
-        // Single source of truth for the app version. Bump these per
-        // release (CI no longer rewrites them). versionCode must not
-        // decrease or installs will refuse to downgrade.
-        versionCode 2
+        targetSdk 36
+        // versionName is the single source of truth for the app version;
+        // bump it per release. versionCode must go up with every Play
+        // upload (and never decrease, or installs refuse to downgrade), so
+        // CI builds use the workflow run number. Local builds keep 2: never
+        // upload those to Play.
+        def ciRunNumber = System.getenv("GITHUB_RUN_NUMBER")
+        versionCode ciRunNumber ? ciRunNumber.toInteger() : 2
         versionName "Beta 0.0.7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

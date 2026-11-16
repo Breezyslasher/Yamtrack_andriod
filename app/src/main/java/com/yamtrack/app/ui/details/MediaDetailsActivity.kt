@@ -31,6 +31,7 @@ import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.ActivityMediaDetailsBinding
 import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.person.PersonActivity
+import com.yamtrack.app.util.fitContentToSystemBars
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -75,6 +76,7 @@ class MediaDetailsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMediaDetailsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        fitContentToSystemBars()
 
         val typeStr = intent.getStringExtra(EXTRA_MEDIA_TYPE) ?: "movie"
         mediaType = MediaType.fromValue(typeStr) ?: MediaType.MOVIE

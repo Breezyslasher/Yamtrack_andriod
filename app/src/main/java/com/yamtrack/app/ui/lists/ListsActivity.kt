@@ -15,6 +15,7 @@ import com.yamtrack.app.R
 import com.yamtrack.app.data.model.CustomList
 import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.databinding.ActivityListsBinding
+import com.yamtrack.app.util.fitContentToSystemBars
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -28,6 +29,7 @@ class ListsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityListsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        fitContentToSystemBars()
 
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.toolbar.setOnMenuItemClickListener { item ->
