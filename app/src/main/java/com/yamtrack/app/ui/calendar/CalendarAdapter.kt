@@ -84,7 +84,7 @@ class CalendarAdapter(
 
         private fun buildDetailLine(event: CalendarEvent): String {
             val parts = mutableListOf<String>()
-            event.mediaType?.displayName?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
+            event.mediaType?.itemLabel?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
             event.seasonNumber?.let { parts.add("Season $it") }
             event.episodeNumber?.let { parts.add("Episode $it") }
             return parts.joinToString(" · ")

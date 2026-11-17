@@ -255,7 +255,7 @@ private class CalendarRemoteViewsFactory(
     }.getOrNull()
 
     private fun buildDetailLine(event: CalendarEvent): String {
-        val typeLabel = event.mediaType?.displayName.orEmpty()
+        val typeLabel = event.mediaType?.itemLabel.orEmpty()
         val parts = mutableListOf<String>()
         if (typeLabel.isNotBlank()) parts.add(typeLabel)
         event.seasonNumber?.let { parts.add("S$it") }
