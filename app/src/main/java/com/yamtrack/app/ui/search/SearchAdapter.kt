@@ -65,7 +65,7 @@ class SearchAdapter(
             // standalone year line is redundant.
             binding.tvYear.visibility = View.GONE
 
-            val typeLabel = item.type?.displayName ?: item.mediaType.orEmpty()
+            val typeLabel = item.type?.itemLabel ?: item.mediaType.orEmpty()
             val year = item.year?.takeIf { it.isNotBlank() }
             binding.tvType.text = if (year != null) "$typeLabel · $year" else typeLabel
 

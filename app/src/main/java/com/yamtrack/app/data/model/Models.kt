@@ -9,17 +9,22 @@ import com.yamtrack.app.data.repository.ArtworkOverrides
  *
  * The "complete" set adds SEASON and EPISODE which are children of TV.
  */
-enum class MediaType(val value: String, val displayName: String) {
-    MOVIE("movie", "Movies"),
-    TV("tv", "TV Shows"),
-    SEASON("season", "Seasons"),
-    EPISODE("episode", "Episodes"),
-    ANIME("anime", "Anime"),
-    MANGA("manga", "Manga"),
-    GAME("game", "Games"),
-    BOOK("book", "Books"),
-    COMIC("comic", "Comics"),
-    BOARDGAME("boardgame", "Board Games");
+/**
+ * [displayName] names the type as a filter or section ("Movies");
+ * [itemLabel] labels a single item of it ("Movie"). Seasons and episodes
+ * are parts of a TV show, so they are labelled "TV".
+ */
+enum class MediaType(val value: String, val displayName: String, val itemLabel: String) {
+    MOVIE("movie", "Movies", "Movie"),
+    TV("tv", "TV Shows", "TV"),
+    SEASON("season", "Seasons", "TV"),
+    EPISODE("episode", "Episodes", "TV"),
+    ANIME("anime", "Anime", "Anime"),
+    MANGA("manga", "Manga", "Manga"),
+    GAME("game", "Games", "Game"),
+    BOOK("book", "Books", "Book"),
+    COMIC("comic", "Comics", "Comic"),
+    BOARDGAME("boardgame", "Board Games", "Board game");
 
     companion object {
         fun fromValue(value: String?): MediaType? = values().find { it.value == value }
@@ -82,6 +87,19 @@ object Sources {
     const val COMICVINE = "comicvine"
     const val BGG = "bgg"
     const val MANUAL = "manual"
+
+    /** Name of the metadata provider, e.g. for "7.3 / 10 · TMDB"; null when unknown. */
+    fun label(source: String?): String? = when (source) {
+        TMDB -> "TMDB"
+        MAL -> "MyAnimeList"
+        MANGAUPDATES -> "MangaUpdates"
+        IGDB -> "IGDB"
+        OPENLIBRARY -> "Open Library"
+        HARDCOVER -> "Hardcover"
+        COMICVINE -> "Comic Vine"
+        BGG -> "BoardGameGeek"
+        else -> null
+    }
 }
 
 /**

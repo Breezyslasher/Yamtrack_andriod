@@ -513,7 +513,10 @@ class MediaDetailsActivity : AppCompatActivity() {
             // Source/public score from the upstream provider — read-only.
             val sourceScore = item.score
             if (sourceScore != null && sourceScore > 0) {
-                tvSourceScore.text = getString(R.string.source_score_format, sourceScore)
+                // Name the provider the score comes from ("7.3 / 10 · TMDB").
+                tvSourceScore.text = Sources.label(item.source)
+                    ?.let { getString(R.string.source_score_format, sourceScore, it) }
+                    ?: getString(R.string.provider_score_format, sourceScore)
                 tvSourceScore.visibility = View.VISIBLE
             } else {
                 tvSourceScore.visibility = View.GONE
