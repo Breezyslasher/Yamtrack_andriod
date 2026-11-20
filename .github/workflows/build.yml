@@ -1,0 +1,334 @@
+name: Build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform(s) to build
+        type: choice
+        default: both
+        options:
+          - both
+          - android
+          - ios
+      build_type:
+        description: Android build type (release also makes the Play App Bundle)
+        type: choice
+        default: debug
+        options:
+          - debug
+          - release
+      prerelease:
+        description: Publish the build(s) as a GitHub prerelease (uses the Android versionName)
+        type: boolean
+        default: false
+
+jobs:
+  # ───────────────────────────────────────────────
+  # Decide which platforms to build. Manual runs follow the `platform`
+  # input and tags build both; pushes and pull requests build only the
+  # platforms whose code changed (this file counts for both).
+  # ───────────────────────────────────────────────
+  changes:
+    name: Changed platforms
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      android: ${{ steps.decide.outputs.android }}
+      ios: ${{ steps.decide.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push' && github.ref_type == 'branch'
+
+      - name: Detect changed paths
+        id: filter
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch')
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            android:
+              - 'android/**'
+              - '.github/workflows/build.yml'
+            ios:
+              - 'ios/**'
+              - '.github/workflows/build.yml'
+
+      - name: Decide
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          PLATFORM: ${{ github.event.inputs.platform }}
+          ANDROID_CHANGED: ${{ steps.filter.outputs.android }}
+          IOS_CHANGED: ${{ steps.filter.outputs.ios }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            android=$([ "$PLATFORM" != "ios" ] && echo true || echo false)
+            ios=$([ "$PLATFORM" != "android" ] && echo true || echo false)
+          elif [ "$REF_TYPE" = "tag" ]; then
+            android=true
+            ios=true
+          else
+            android=${ANDROID_CHANGED:-false}
+            ios=${IOS_CHANGED:-false}
+          fi
+          echo "android=$android" >> "$GITHUB_OUTPUT"
+          echo "ios=$ios" >> "$GITHUB_OUTPUT"
+          echo "Android: $android, iOS: $ios"
+
+  # ───────────────────────────────────────────────
+  # Android — APK, plus the App Bundle for release builds
+  # ───────────────────────────────────────────────
+  build-android:
+    name: Android APK (${{ github.event.inputs.build_type || (github.ref_type == 'tag' && 'release') || 'debug' }})
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          # The default also installs the legacy 'tools' package, which the
+          # SDK repository no longer serves (sdkmanager fails on it).
+          packages: platform-tools
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      # versionName comes from android/app/build.gradle; edit it there per
+      # release. versionCode must rise with every Play upload: it is this
+      # workflow's run number plus 1000, as the old Android-only workflow
+      # (whose run numbers this one doesn't continue) already reached 179.
+      - name: Set versionCode
+        run: echo "APP_VERSION_CODE=$((GITHUB_RUN_NUMBER + 1000))" >> "$GITHUB_ENV"
+
+      - name: Restore signing keystore
+        # SIGNING_KEYSTORE_BASE64 is a repo secret holding
+        # `base64 -w0 yamtrack-upload.jks`. Absent (e.g. forks) -> the
+        # build falls back to the debug keystore automatically.
+        env:
+          KS_B64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "SIGNING_STORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build APK (and App Bundle for release)
+        env:
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ "${{ github.event.inputs.build_type }}" = "release" ] || [ "${{ github.ref_type }}" = "tag" ]; then
+            # The .aab is what Google Play takes; the APK is for sideloading.
+            ./gradlew assembleRelease bundleRelease --no-daemon --stacktrace
+          else
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          fi
+
+      - name: Locate APKs
+        id: locate
+        working-directory: .
+        run: |
+          mapfile -t apks < <(find android/app/build/outputs/apk -type f -name '*.apk' | sort)
+          if [ ${#apks[@]} -eq 0 ]; then
+            echo "No APK produced" >&2
+            exit 1
+          fi
+          {
+            echo 'paths<<EOF'
+            printf '%s\n' "${apks[@]}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Yamtrack-android-${{ github.run_number }}
+          path: ${{ steps.locate.outputs.paths }}
+          if-no-files-found: error
+
+      # Kept apart from the APK artifact so releases only attach APKs.
+      - name: Name App Bundle after the version
+        id: bundle
+        working-directory: .
+        run: |
+          aab=$(find android/app/build/outputs/bundle -type f -name '*.aab' 2>/dev/null | head -n1)
+          if [ -z "$aab" ]; then
+            echo "path=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          version_name=$(grep -E '^[[:space:]]*versionName[[:space:]]+' android/app/build.gradle \
+            | head -n1 | sed -E 's/.*versionName[[:space:]]+"([^"]+)".*/\1/' | tr ' ' '-')
+          out="android/app/build/outputs/bundle/Yamtrack.Andriod.${version_name}.aab"
+          mv "$aab" "$out"
+          echo "path=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Upload App Bundle artifact
+        if: steps.bundle.outputs.path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: Yamtrack-android-bundle-${{ github.run_number }}
+          path: ${{ steps.bundle.outputs.path }}
+          if-no-files-found: error
+
+  # ───────────────────────────────────────────────
+  # iOS — unsigned .ipa for real iPhones and iPads (arm64). A sideloading
+  # tool (Sideloadly, AltStore, SideStore) signs it with the user's own
+  # Apple ID at install, so CI needs no certificate or provisioning
+  # profile, and no Mac is needed at home.
+  # ───────────────────────────────────────────────
+  build-ios:
+    name: iOS (.ipa, unsigned)
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: macos-15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for iOS devices (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Yamtrack.xcodeproj \
+            -scheme Yamtrack \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            build
+
+      - name: Pack .ipa
+        run: |
+          set -eu
+          app=build/Build/Products/Release-iphoneos/Yamtrack.app
+          test -d "$app"
+          mkdir -p ipa/Payload
+          cp -R "$app" ipa/Payload/
+          (cd ipa && zip -qry ../YamtrackUnofficial.ipa Payload)
+          ls -la YamtrackUnofficial.ipa
+
+      - name: Upload .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: Yamtrack-ios-${{ github.run_number }}
+          path: ios/YamtrackUnofficial.ipa
+          if-no-files-found: error
+
+  # ───────────────────────────────────────────────
+  # Tag-driven release: a draft GitHub Release with the APK(s) and .ipa.
+  # ───────────────────────────────────────────────
+  upload-release:
+    name: Release
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Yamtrack ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: true
+          files: |
+            dist/Yamtrack-android-*/**/*.apk
+            dist/Yamtrack-ios-*/*.ipa
+
+  # ───────────────────────────────────────────────
+  # Manual prerelease: when dispatched with `prerelease=true`, publish what
+  # was built (APK and/or .ipa) as a GitHub prerelease named after the
+  # app's versionName. Runs when one platform was skipped, not when one failed.
+  # ───────────────────────────────────────────────
+  upload-prerelease:
+    name: Prerelease
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: >-
+      !cancelled() && !contains(needs.*.result, 'failure') &&
+      github.event_name == 'workflow_dispatch' && github.event.inputs.prerelease == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read versionName from android/app/build.gradle
+        id: version
+        run: |
+          version_name=$(grep -E '^[[:space:]]*versionName[[:space:]]+' android/app/build.gradle \
+            | head -n1 \
+            | sed -E 's/.*versionName[[:space:]]+"([^"]+)".*/\1/')
+          if [ -z "$version_name" ]; then
+            echo "Could not parse versionName from android/app/build.gradle" >&2
+            exit 1
+          fi
+          # Tag-safe slug (spaces -> dots) so e.g. "Beta 0.0.4" -> "v-Beta.0.0.4"
+          tag_slug=$(echo "$version_name" | tr ' ' '.')
+          echo "name=$version_name" >> "$GITHUB_OUTPUT"
+          echo "tag=v-$tag_slug-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Publish prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            dist/Yamtrack-android-*/**/*.apk
+            dist/Yamtrack-ios-*/*.ipa

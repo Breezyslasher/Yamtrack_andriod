@@ -1,6 +1,6 @@
-# Yamtrack Android App
+# Yamtrack Unofficial (Android & iOS)
 
-A native Android client for [Yamtrack](https://github.com/FuzzyGrim/Yamtrack), built against the REST API on the `feat/add-api` / `dev` branches ([PR #924](https://github.com/FuzzyGrim/Yamtrack/pull/924)).
+Native Android and iOS clients for [Yamtrack](https://github.com/FuzzyGrim/Yamtrack), built against the REST API on the `feat/add-api` / `dev` branches ([PR #924](https://github.com/FuzzyGrim/Yamtrack/pull/924)).
 
 This client was written against the actual API source (`src/api/urls.py`, `src/api/views.py`, `src/api/serializers.py`, `src/api/authentication.py`) — not the PR description — so the data shapes and query params match exactly.
 
@@ -94,20 +94,39 @@ These details are easy to get wrong from the PR description and required reading
 
 ## Building
 
+The Android app lives in `android/`; the iOS app in `ios/`. They are separate
+native apps (Kotlin and SwiftUI) for the same API and share no code.
+
 ### Android Studio
-1. Open the project, let Gradle sync
+1. Open the `android/` folder, let Gradle sync
 2. Run (`Shift + F10`)
 
 ### Command Line
 ```bash
+cd android
 ./gradlew assembleDebug
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
+### iOS
+
+The iOS app is built in CI (the **Build** workflow's iOS job, macOS runner): XcodeGen
+generates the Xcode project from `ios/project.yml`, and `xcodebuild` makes an
+**unsigned** `.ipa` for real iPhones and iPads, uploaded as the
+`Yamtrack-ios-<run>` artifact.
+
+To install it, sideload the `.ipa` with [Sideloadly](https://sideloadly.io),
+[AltStore](https://altstore.io) or [SideStore](https://sidestore.io), which sign
+it with your Apple ID. With a free Apple ID the app must be re-signed every
+7 days. No Mac is needed.
+
+To build locally on a Mac: `brew install xcodegen`, then `cd ios && xcodegen
+generate` and open `Yamtrack.xcodeproj`.
+
 ## Project Structure
 
 ```
-app/src/main/java/com/yamtrack/app/
+android/app/src/main/java/com/yamtrack/app/
 ├── data/
 │   ├── api/
 │   │   ├── YamtrackApi.kt          # Retrofit interface (mirrors api/urls.py)
