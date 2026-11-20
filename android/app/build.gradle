@@ -21,10 +21,10 @@ android {
         // versionName is the single source of truth for the app version;
         // bump it per release. versionCode must go up with every Play
         // upload (and never decrease, or installs refuse to downgrade), so
-        // CI builds use the workflow run number. Local builds keep 2: never
-        // upload those to Play.
-        def ciRunNumber = System.getenv("GITHUB_RUN_NUMBER")
-        versionCode ciRunNumber ? ciRunNumber.toInteger() : 2
+        // CI sets APP_VERSION_CODE (the Build workflow's run number + 1000).
+        // Local builds keep 2: never upload those to Play.
+        def ciVersionCode = System.getenv("APP_VERSION_CODE")
+        versionCode ciVersionCode ? ciVersionCode.toInteger() : 2
         versionName "Beta 0.0.7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

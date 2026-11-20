@@ -110,7 +110,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 ### iOS
 
-The iOS app is built in CI (**Build iOS** workflow, macOS runner): XcodeGen
+The iOS app is built in CI (the **Build** workflow's iOS job, macOS runner): XcodeGen
 generates the Xcode project from `ios/project.yml`, and `xcodebuild` makes an
 **unsigned** `.ipa` for real iPhones and iPads, uploaded as the
 `Yamtrack-ios-<run>` artifact.
