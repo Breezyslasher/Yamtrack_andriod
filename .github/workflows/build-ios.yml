@@ -1,0 +1,63 @@
+name: Build iOS
+
+on:
+  push:
+    branches: ['**']
+    paths: ['ios/**', '.github/workflows/build-ios.yml']
+  pull_request:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/build-ios.yml']
+  workflow_dispatch:
+
+jobs:
+  # Builds for real iPhones and iPads (arm64), UNSIGNED, packed as an .ipa.
+  # A sideloading tool (Sideloadly, AltStore, SideStore) signs it with the
+  # user's own Apple ID at install, so CI needs no certificate or
+  # provisioning profile, and no Mac is needed at home.
+  build-ios:
+    name: iOS (.ipa, unsigned)
+    runs-on: macos-15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for iOS devices (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Yamtrack.xcodeproj \
+            -scheme Yamtrack \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            build
+
+      - name: Pack .ipa
+        run: |
+          set -eu
+          app=build/Build/Products/Release-iphoneos/Yamtrack.app
+          test -d "$app"
+          mkdir -p ipa/Payload
+          cp -R "$app" ipa/Payload/
+          (cd ipa && zip -qry ../YamtrackUnofficial.ipa Payload)
+          ls -la YamtrackUnofficial.ipa
+
+      - name: Upload .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: Yamtrack-ios-${{ github.run_number }}
+          path: ios/YamtrackUnofficial.ipa
+          if-no-files-found: error
