@@ -39,6 +39,7 @@ extension View {
     func mediaDestinations() -> some View {
         navigationDestination(for: MediaRef.self) { MediaDetailView(ref: $0) }
             .navigationDestination(for: SeasonRef.self) { EpisodesView(ref: $0) }
+            .navigationDestination(for: PersonRef.self) { PersonView(ref: $0) }
     }
 }
 
@@ -73,14 +74,24 @@ struct PosterImage: View {
     }
 }
 
+/// Long-press actions a screen offers on its poster cards.
+struct CardActions {
+    var changeArtwork: ((ArtworkTarget) -> Void)?
+    var addToList: ((MediaItem) -> Void)?
+    var removeFromList: ((MediaItem) -> Void)?
+}
+
 /// Poster card with title and status, linking to the media.
 struct MediaCard: View {
     let entry: MediaItem
     var width: CGFloat? = 120
+    var actions = CardActions()
+
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         let card = VStack(alignment: .leading, spacing: 4) {
-            PosterImage(url: entry.item?.image)
+            PosterImage(url: appState.image(for: entry.item))
                 .aspectRatio(2 / 3, contentMode: .fit)
             Text(entry.title)
                 .font(.footnote)
@@ -91,10 +102,29 @@ struct MediaCard: View {
         }
         .frame(width: width)
 
-        if let ref = MediaRef(item: entry.item) {
-            NavigationLink(value: ref) { card }.buttonStyle(.plain)
-        } else {
-            card
+        Group {
+            if let ref = MediaRef(item: entry.item) {
+                NavigationLink(value: ref) { card }.buttonStyle(.plain)
+            } else {
+                card
+            }
+        }
+        .contextMenu { menu }
+    }
+
+    @ViewBuilder
+    private var menu: some View {
+        if let change = actions.changeArtwork, appState.artworkSupported != false,
+           let target = ArtworkTarget(item: entry.item) {
+            Button { change(target) } label: { Label("Change artwork", systemImage: "photo") }
+        }
+        if let add = actions.addToList {
+            Button { add(entry) } label: { Label("Add to list", systemImage: "text.badge.plus") }
+        }
+        if let remove = actions.removeFromList {
+            Button(role: .destructive) { remove(entry) } label: {
+                Label("Remove from list", systemImage: "trash")
+            }
         }
     }
 }

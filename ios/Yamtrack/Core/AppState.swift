@@ -10,6 +10,12 @@ final class AppState {
     private(set) var client: APIClient?
     var serverURL: String
 
+    /// Covers changed this session, by media key. The server keeps the
+    /// cover; this only updates lists that were loaded before the change.
+    private(set) var coverOverrides: [String: String] = [:]
+    /// Whether the server has the artwork endpoints; nil until asked.
+    private(set) var artworkSupported: Bool?
+
     init() {
         serverURL = UserDefaults.standard.string(forKey: Self.serverKey) ?? ""
         if !serverURL.isEmpty, let token = Keychain.load() {
@@ -35,6 +41,8 @@ final class AppState {
         serverURL = candidate.baseURL
         UserDefaults.standard.set(serverURL, forKey: Self.serverKey)
         Keychain.save(token.trimmingCharacters(in: .whitespacesAndNewlines))
+        coverOverrides = [:]
+        artworkSupported = nil
         client = candidate
     }
 
@@ -42,5 +50,40 @@ final class AppState {
     func logout() {
         Keychain.delete()
         client = nil
+        coverOverrides = [:]
+        artworkSupported = nil
+    }
+
+    // MARK: Artwork
+
+    static func coverKey(type: String, source: String, mediaId: String, season: Int? = nil) -> String {
+        "\(type)|\(source)|\(mediaId)|\(season.map(String.init) ?? "")"
+    }
+
+    /// The image to show for an item: a cover changed this session, if any.
+    func image(for item: Item?) -> String? {
+        guard let item else { return nil }
+        let season = item.type == .season ? item.seasonNumber : nil
+        let key = Self.coverKey(type: item.mediaType, source: item.source, mediaId: item.mediaId, season: season)
+        return coverOverrides[key] ?? item.image
+    }
+
+    func image(forKey key: String, fallback: String?) -> String? {
+        coverOverrides[key] ?? fallback
+    }
+
+    @MainActor
+    func coverChanged(key: String, image: String?) {
+        coverOverrides[key] = image
+    }
+
+    /// Asks the server once whether it can change artwork.
+    @MainActor
+    func checkArtworkSupport() async -> Bool {
+        if let artworkSupported { return artworkSupported }
+        guard let client else { return false }
+        let supported = await client.supportsArtwork()
+        artworkSupported = supported
+        return supported
     }
 }

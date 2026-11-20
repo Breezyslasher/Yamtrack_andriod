@@ -31,7 +31,7 @@ struct MainTabView: View {
                 .tabItem { Label("Calendar", systemImage: "calendar") }
             NavigationStack { SearchView().mediaDestinations() }
                 .tabItem { Label("Search", systemImage: "magnifyingglass") }
-            NavigationStack { SettingsView() }
+            NavigationStack { SettingsView().mediaDestinations() }
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }
     }

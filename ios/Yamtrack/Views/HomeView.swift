@@ -7,6 +7,7 @@ struct HomeView: View {
     @State private var planning: [MediaItem] = []
     @State private var loading = false
     @State private var error: String?
+    @State private var artworkTarget: ArtworkTarget?
 
     var body: some View {
         LoadState(loading: loading, error: error, isEmpty: recent.isEmpty && planning.isEmpty,
@@ -23,6 +24,8 @@ struct HomeView: View {
         .refreshable { await load() }
         // Reload whenever the screen is shown again, e.g. after tracking something.
         .onAppear { Task { await load() } }
+        .task { _ = await appState.checkArtworkSupport() }
+        .sheet(item: $artworkTarget) { ArtworkPickerSheet(target: $0) }
     }
 
     @ViewBuilder
@@ -35,7 +38,9 @@ struct HomeView: View {
                     Text(type.pluralName).font(.headline).padding(.horizontal)
                     ScrollView(.horizontal, showsIndicators: false) {
                         LazyHStack(alignment: .top, spacing: 12) {
-                            ForEach(row) { MediaCard(entry: $0) }
+                            ForEach(row) {
+                                MediaCard(entry: $0, actions: CardActions(changeArtwork: { artworkTarget = $0 }))
+                            }
                         }
                         .padding(.horizontal)
                     }

@@ -124,6 +124,7 @@ struct MediaItem: Decodable, Identifiable, Hashable {
     let progress: Int?
     let progressedAt: String?
     let endDate: String?
+    let lists: [ListMembership]
 
     var id: String {
         guard let item else { return UUID().uuidString }
@@ -135,7 +136,7 @@ struct MediaItem: Decodable, Identifiable, Hashable {
     var status: MediaStatus? { MediaStatus.from(api: statusValue) }
 
     enum CodingKeys: String, CodingKey {
-        case item, tracked, score, status, progress, progressedAt, endDate
+        case item, tracked, score, status, progress, progressedAt, endDate, lists
     }
 
     init(from decoder: Decoder) throws {
@@ -147,6 +148,7 @@ struct MediaItem: Decodable, Identifiable, Hashable {
         progress = try? c.decodeIfPresent(Int.self, forKey: .progress)
         progressedAt = try? c.decodeIfPresent(String.self, forKey: .progressedAt)
         endDate = try? c.decodeIfPresent(String.self, forKey: .endDate)
+        lists = (try? c.decodeIfPresent([ListMembership].self, forKey: .lists)) ?? []
     }
 }
 
@@ -185,6 +187,8 @@ struct MediaDetails: Decodable {
     let details: [String: JSONValue]
     let tracked: Bool
     let consumptions: [HistoryEntry]
+    let timeToBeat: TimeToBeat?
+    let lists: [ListMembership]
 
     var type: MediaType? { mediaType.flatMap(MediaType.init(rawValue:)) }
     var userEntry: HistoryEntry? { consumptions.first }
@@ -193,6 +197,7 @@ struct MediaDetails: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case mediaId, source, mediaType, title, image, synopsis, genres, score, details, tracked, consumptions
+        case timeToBeat, lists
     }
 
     init(from decoder: Decoder) throws {
@@ -208,6 +213,8 @@ struct MediaDetails: Decodable {
         details = (try? c.decodeIfPresent([String: JSONValue].self, forKey: .details)) ?? [:]
         tracked = (try? c.decodeIfPresent(Bool.self, forKey: .tracked)) ?? false
         consumptions = (try? c.decodeIfPresent([HistoryEntry].self, forKey: .consumptions)) ?? []
+        timeToBeat = try? c.decodeIfPresent(TimeToBeat.self, forKey: .timeToBeat)
+        lists = (try? c.decodeIfPresent([ListMembership].self, forKey: .lists)) ?? []
     }
 }
 

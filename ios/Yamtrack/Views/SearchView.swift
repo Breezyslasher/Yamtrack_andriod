@@ -9,6 +9,7 @@ struct SearchView: View {
     @State private var loading = false
     @State private var error: String?
     @State private var message: String?
+    @State private var artworkTarget: ArtworkTarget?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -35,12 +36,16 @@ struct SearchView: View {
         .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("OK", role: .cancel) {}
         }
+        .task { _ = await appState.checkArtworkSupport() }
+        .sheet(item: $artworkTarget) { ArtworkPickerSheet(target: $0) }
     }
 
     @ViewBuilder
     private func row(_ result: SearchResult) -> some View {
         let content = HStack(spacing: 12) {
-            PosterImage(url: result.image, cornerRadius: 6)
+            PosterImage(url: appState.image(forKey: AppState.coverKey(type: result.mediaType, source: result.source,
+                                                                      mediaId: result.mediaId),
+                                            fallback: result.image), cornerRadius: 6)
                 .frame(width: 56, height: 84)
             VStack(alignment: .leading, spacing: 4) {
                 Text(result.title ?? "Unknown").font(.headline).lineLimit(2)
@@ -56,10 +61,20 @@ struct SearchView: View {
             }
             .buttonStyle(.borderless)
         }
-        if let ref = MediaRef(result: result) {
-            NavigationLink(value: ref) { content }
-        } else {
-            content
+        Group {
+            if let ref = MediaRef(result: result) {
+                NavigationLink(value: ref) { content }
+            } else {
+                content
+            }
+        }
+        .contextMenu {
+            if appState.artworkSupported != false, let type = result.type, type != .season, type != .episode {
+                Button {
+                    artworkTarget = ArtworkTarget(type: type, source: result.source, mediaId: result.mediaId,
+                                                  title: result.title ?? "")
+                } label: { Label("Change artwork", systemImage: "photo") }
+            }
         }
     }
 

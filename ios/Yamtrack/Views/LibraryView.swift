@@ -9,6 +9,8 @@ struct LibraryView: View {
     @State private var items: [MediaItem] = []
     @State private var loading = false
     @State private var error: String?
+    @State private var artworkTarget: ArtworkTarget?
+    @State private var listTarget: ListTarget?
 
     private struct SortOption: Hashable {
         let value: String
@@ -33,7 +35,11 @@ struct LibraryView: View {
                       emptyText: "No \(type.pluralName.lowercased()) here", retry: load) {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 105), spacing: 12)], spacing: 16) {
-                        ForEach(items) { MediaCard(entry: $0, width: nil) }
+                        ForEach(items) {
+                            MediaCard(entry: $0, width: nil, actions: CardActions(
+                                changeArtwork: { artworkTarget = $0 },
+                                addToList: { listTarget = ListTarget(entry: $0) }))
+                        }
                     }
                     .padding()
                 }
@@ -51,6 +57,11 @@ struct LibraryView: View {
         }
         .refreshable { await load() }
         .task(id: "\(type.rawValue)|\(status?.rawValue ?? -1)|\(sort)") { await load() }
+        .task { _ = await appState.checkArtworkSupport() }
+        .sheet(item: $artworkTarget) { ArtworkPickerSheet(target: $0) }
+        .sheet(item: $listTarget) { target in
+            AddToListSheet(target: target) { Task { await load() } }
+        }
     }
 
     private func load() async {

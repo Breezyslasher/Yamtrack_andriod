@@ -46,6 +46,23 @@ final class APIClient {
         _ = try await send(method, path, body: body)
     }
 
+    /// Sends a request and decodes its response.
+    func request<T: Decodable>(_ method: String, _ path: String, body: (any Encodable)? = nil) async throws -> T {
+        try decoder.decode(T.self, from: try await send(method, path, body: body))
+    }
+
+    /// The HTTP status a request gets, or nil when the server can't be reached.
+    func status(_ method: String, _ path: String) async -> Int? {
+        do {
+            try await send(method, path)
+            return 200
+        } catch let error as APIError {
+            return error.status
+        } catch {
+            return nil
+        }
+    }
+
     @discardableResult
     private func send(_ method: String, _ path: String,
                       query: [String: String?] = [:], body: (any Encodable)? = nil) async throws -> Data {
