@@ -94,12 +94,15 @@ These details are easy to get wrong from the PR description and required reading
 
 ## Building
 
+The Android app lives in `android/`; the iOS app in `ios/`.
+
 ### Android Studio
-1. Open the project, let Gradle sync
+1. Open the `android/` folder, let Gradle sync
 2. Run (`Shift + F10`)
 
 ### Command Line
 ```bash
+cd android
 ./gradlew assembleDebug
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
@@ -107,7 +110,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 ## Project Structure
 
 ```
-app/src/main/java/com/yamtrack/app/
+android/app/src/main/java/com/yamtrack/app/
 ├── data/
 │   ├── api/
 │   │   ├── YamtrackApi.kt          # Retrofit interface (mirrors api/urls.py)

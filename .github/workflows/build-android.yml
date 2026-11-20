@@ -4,8 +4,10 @@ on:
   push:
     branches: ['**']
     tags: ['v*']
+    paths-ignore: ['ios/**', '.github/workflows/build-ios.yml']
   pull_request:
     branches: [main]
+    paths-ignore: ['ios/**', '.github/workflows/build-ios.yml']
   workflow_dispatch:
     inputs:
       build_type:
@@ -55,7 +57,7 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      # versionName comes straight from app/build.gradle — edit it there per
+      # versionName comes straight from android/app/build.gradle — edit it there per
       # release. versionCode is this workflow's run number (see build.gradle),
       # so every build Play receives is numbered higher than the last.
 
@@ -72,6 +74,7 @@ jobs:
           fi
 
       - name: Build APK (and App Bundle for release)
+        working-directory: android
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
@@ -88,7 +91,7 @@ jobs:
       - name: Locate APKs
         id: locate
         run: |
-          mapfile -t apks < <(find app/build/outputs/apk -type f -name '*.apk' | sort)
+          mapfile -t apks < <(find android/app/build/outputs/apk -type f -name '*.apk' | sort)
           if [ ${#apks[@]} -eq 0 ]; then
             echo "No APK produced" >&2
             exit 1
@@ -110,14 +113,14 @@ jobs:
       - name: Name App Bundle after the version
         id: bundle
         run: |
-          aab=$(find app/build/outputs/bundle -type f -name '*.aab' 2>/dev/null | head -n1)
+          aab=$(find android/app/build/outputs/bundle -type f -name '*.aab' 2>/dev/null | head -n1)
           if [ -z "$aab" ]; then
             echo "path=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          version_name=$(grep -E '^[[:space:]]*versionName[[:space:]]+' app/build.gradle \
+          version_name=$(grep -E '^[[:space:]]*versionName[[:space:]]+' android/app/build.gradle \
             | head -n1 | sed -E 's/.*versionName[[:space:]]+"([^"]+)".*/\1/' | tr ' ' '-')
-          out="app/build/outputs/bundle/Yamtrack.Andriod.${version_name}.aab"
+          out="android/app/build/outputs/bundle/Yamtrack.Andriod.${version_name}.aab"
           mv "$aab" "$out"
           echo "path=$out" >> "$GITHUB_OUTPUT"
 
@@ -171,14 +174,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read versionName from app/build.gradle
+      - name: Read versionName from android/app/build.gradle
         id: version
         run: |
-          version_name=$(grep -E '^[[:space:]]*versionName[[:space:]]+' app/build.gradle \
+          version_name=$(grep -E '^[[:space:]]*versionName[[:space:]]+' android/app/build.gradle \
             | head -n1 \
             | sed -E 's/.*versionName[[:space:]]+"([^"]+)".*/\1/')
           if [ -z "$version_name" ]; then
-            echo "Could not parse versionName from app/build.gradle" >&2
+            echo "Could not parse versionName from android/app/build.gradle" >&2
             exit 1
           fi
           # Tag-safe slug (spaces -> dots) so e.g. "Beta 0.0.4" -> "v-Beta.0.0.4"
