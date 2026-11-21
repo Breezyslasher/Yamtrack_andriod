@@ -31,7 +31,9 @@ class EpisodesAdapter(
     private val loadingText: String,
     private val hideUnwatchedInfo: Boolean,
     private val detailProvider: suspend (Int) -> EpisodeDetail?,
-    private val onWatchedToggled: (episodeNumber: Int, watched: Boolean) -> Unit
+    private val onWatchedToggled: (episodeNumber: Int, watched: Boolean) -> Unit,
+    /** Tapping an episode: where to watch it. */
+    private val onEpisodeClick: (episodeNumber: Int) -> Unit = {}
 ) : ListAdapter<MediaItem, EpisodesAdapter.VH>(Diff()) {
 
     /** [name] is the episode's own title; [line] the date/length/description. */
@@ -61,6 +63,8 @@ class EpisodesAdapter(
             binding.tvTitle.text =
                 if (hide) hiddenTitleFor(epNum) else titleFor(epNum, names[epNum] ?: ep.title)
             binding.ivThumb.contentDescription = binding.tvTitle.text
+
+            binding.root.setOnClickListener { onEpisodeClick(epNum) }
 
             binding.cbWatched.setOnCheckedChangeListener(null)
             binding.cbWatched.isChecked = ep.tracked

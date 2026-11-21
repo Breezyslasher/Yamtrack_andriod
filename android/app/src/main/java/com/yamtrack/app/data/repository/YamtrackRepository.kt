@@ -526,6 +526,27 @@ class YamtrackRepository @Inject constructor(
         return apiCall { api.getProviders(mediaType.value, source, mediaId, country) }
     }
 
+    /**
+     * Where to watch one episode, with its own links. Same region fallback as
+     * [getProviders]. Servers without the endpoint (404) give no providers.
+     */
+    suspend fun getEpisodeProviders(
+        source: String,
+        mediaId: String,
+        season: Int,
+        episode: Int
+    ): Result<WatchProviders> {
+        var result = apiCall { api.getEpisodeProviders(source, mediaId, season, episode) }
+        if (result is Result.Error && result.code == 400) {
+            val country = java.util.Locale.getDefault().country
+            if (country.isNotBlank()) {
+                result = apiCall { api.getEpisodeProviders(source, mediaId, season, episode, country) }
+            }
+        }
+        if (result is Result.Error && result.code == 404) return Result.Success(WatchProviders())
+        return result
+    }
+
     /** Server URL -> whether it has the artwork (images + cover) endpoints. */
     private val artworkSupport = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 

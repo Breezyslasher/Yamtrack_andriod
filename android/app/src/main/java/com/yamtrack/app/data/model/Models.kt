@@ -706,8 +706,12 @@ data class WatchProvider(
     @Json(name = "provider_name") val providerName: String? = null,
     @Json(name = "image") val image: String? = null,
     @Json(name = "display_priority") val displayPriority: Int? = null,
-    /** Direct link to the title on this service (JustWatch); null unless the server enables it. */
+    /** The title's page on this service (JustWatch); null unless the server enables it.
+     *  For an episode, the episode's web link when JustWatch has one. */
     @Json(name = "link") val link: String? = null,
+    /** The link that starts the title in the service's app (JustWatch's Android TV
+     *  deeplink as https); null if JustWatch has none or the server is older. */
+    @Json(name = "tv_link") val tvLink: String? = null,
     /** Formatted prices, e.g. "$3.99" (JustWatch). */
     @Json(name = "buy_price") val buyPrice: String? = null,
     @Json(name = "rent_price") val rentPrice: String? = null,

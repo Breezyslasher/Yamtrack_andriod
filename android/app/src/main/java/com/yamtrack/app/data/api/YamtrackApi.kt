@@ -264,6 +264,16 @@ interface YamtrackApi {
         @Query("region") region: String? = null
     ): Response<WatchProviders>
 
+    /** Where to watch one episode, with that episode's own JustWatch links. */
+    @GET("api/v1/media/tv/{source}/{media_id}/{season}/{episode}/providers/")
+    suspend fun getEpisodeProviders(
+        @Path("source") source: String,
+        @Path("media_id") mediaId: String,
+        @Path("season") season: Int,
+        @Path("episode") episode: Int,
+        @Query("region") region: String? = null
+    ): Response<WatchProviders>
+
     /** Available artwork; `type` is posters, backdrops, screenshots or logos. */
     @GET("api/v1/media/{media_type}/{source}/{media_id}/images/")
     suspend fun getMediaImages(
