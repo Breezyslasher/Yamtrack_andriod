@@ -71,9 +71,17 @@ object ProviderLauncher {
      * made playable, those opening an installed app first and add-on channels
      * last. Calls the package manager, so run it off the main thread.
      */
-    fun arrange(context: Context, providers: List<WatchProvider>): List<WatchProvider> {
+    fun arrange(context: Context, providers: List<WatchProvider>): List<WatchProvider> =
+        arrangeWithApps(context, providers).providers
+
+    /** [providers] in [arrange]'s order, and which of them open an installed app. */
+    class Arranged(val providers: List<WatchProvider>, val withApp: Set<WatchProvider>)
+
+    /** [arrange], also saying which services open an installed app. Off the main thread. */
+    fun arrangeWithApps(context: Context, providers: List<WatchProvider>): Arranged {
         val list = ProviderLinks.dedupe(ProviderLinks.discoveryPlayLinks(providers))
-        val installed = list.associateWith { hasApp(context, it) }
-        return list.sortedWith(compareBy({ installed[it] != true }, { ProviderLinks.isChannel(it) }))
+        val withApp = list.filter { hasApp(context, it) }.toSet()
+        val sorted = list.sortedWith(compareBy({ it !in withApp }, { ProviderLinks.isChannel(it) }))
+        return Arranged(sorted, withApp)
     }
 }

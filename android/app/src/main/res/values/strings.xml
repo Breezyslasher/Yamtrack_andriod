@@ -167,7 +167,9 @@
     <string name="provider_buy_price">Buy %1$s</string>
     <string name="provider_price_quality">%1$s (%2$s)</string>
     <string name="watch_episode_on">Watch episode %1$d on…</string>
-    <string name="provider_opens_show">%1$s (opens the show)</string>
+    <string name="watch_note_opens_show">Opens the show, not this episode</string>
+    <string name="watch_note_browser">App not installed · opens in browser</string>
+    <string name="watch_opening_show">No link for this episode, opening the show in %1$s</string>
     <string name="episode_no_links">No streaming links for this episode</string>
     <string name="episode_links_failed">Couldn\'t load where to watch this episode</string>
 
