@@ -30,9 +30,9 @@ struct SettingsView: View {
             Section {
                 LabeledContent("Version", value: version)
                 Link("Privacy policy",
-                     destination: URL(string: "https://github.com/Breezyslasher/Yamtrack_andriod/blob/main/PRIVACY.md")!)
+                     destination: URL(string: "https://github.com/Breezyslasher/Yamtrack_mobile/blob/main/PRIVACY.md")!)
                 Link("Source and issues",
-                     destination: URL(string: "https://github.com/Breezyslasher/Yamtrack_andriod")!)
+                     destination: URL(string: "https://github.com/Breezyslasher/Yamtrack_mobile")!)
             } footer: {
                 Text("Yamtrack Unofficial is not affiliated with the Yamtrack project.")
             }
