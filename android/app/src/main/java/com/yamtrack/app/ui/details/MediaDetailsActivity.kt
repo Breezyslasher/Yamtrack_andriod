@@ -1,7 +1,6 @@
 package com.yamtrack.app.ui.details
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
@@ -26,14 +25,16 @@ import com.yamtrack.app.data.model.Result
 import com.yamtrack.app.data.model.SearchResult
 import com.yamtrack.app.data.model.Sources
 import com.yamtrack.app.data.model.TimeToBeat
-import com.yamtrack.app.data.model.WatchProvider
 import com.yamtrack.app.data.repository.ArtworkOverrides
 import com.yamtrack.app.databinding.ActivityMediaDetailsBinding
+import com.yamtrack.app.links.ProviderLauncher
 import com.yamtrack.app.ui.common.ArtworkPicker
 import com.yamtrack.app.ui.person.PersonActivity
 import com.yamtrack.app.util.fitContentToSystemBars
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -135,11 +136,12 @@ class MediaDetailsActivity : AppCompatActivity() {
         castAdapter = CastAdapter(onCastClick)
         binding.rvCast.horizontalRail(castAdapter)
 
-        freeProvidersAdapter = ProvidersAdapter { openProvidersLink(it) }
-        paidProvidersAdapter = ProvidersAdapter { openProvidersLink(it) }
+        freeProvidersAdapter = ProvidersAdapter { ProviderLauncher.open(this, it, providersLink) }
+        paidProvidersAdapter = ProvidersAdapter { ProviderLauncher.open(this, it, providersLink) }
         binding.rvProvidersFree.horizontalRail(freeProvidersAdapter)
         binding.rvProvidersPaid.horizontalRail(paidProvidersAdapter)
-        binding.tvProvidersHeader.setOnClickListener { openProvidersLink(null) }
+        // The header opens TMDB's region-wide "where to watch" page.
+        binding.tvProvidersHeader.setOnClickListener { ProviderLauncher.openInBrowser(this, providersLink) }
     }
 
     private fun RecyclerView.horizontalRail(rvAdapter: RecyclerView.Adapter<*>) {
@@ -160,19 +162,6 @@ class MediaDetailsActivity : AppCompatActivity() {
                 putExtra(PersonActivity.EXTRA_NAME, member.name)
             }
         )
-    }
-
-    /**
-     * Opens the provider's direct link to this title when the server has
-     * JustWatch links enabled; otherwise (or for the header) TMDB's
-     * region-wide "where to watch" page.
-     */
-    private fun openProvidersLink(provider: WatchProvider?) {
-        val link = provider?.link?.takeIf { it.isNotBlank() } ?: providersLink ?: return
-        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) }
-            .onFailure {
-                Toast.makeText(this, R.string.could_not_open_browser, Toast.LENGTH_SHORT).show()
-            }
     }
 
     private fun openEpisodes(season: MediaItem) {
@@ -446,8 +435,16 @@ class MediaDetailsActivity : AppCompatActivity() {
             providersLink = providers?.link
             val free = providers?.noCharge.orEmpty()
             val paid = providers?.paid.orEmpty()
-            freeProvidersAdapter.submitList(free)
-            paidProvidersAdapter.submitList(paid)
+            // Installed apps first, add-on channels last; the package manager
+            // lookups run off the main thread.
+            lifecycleScope.launch {
+                val (sortedFree, sortedPaid) = withContext(Dispatchers.Default) {
+                    ProviderLauncher.arrange(applicationContext, free) to
+                        ProviderLauncher.arrange(applicationContext, paid)
+                }
+                freeProvidersAdapter.submitList(sortedFree)
+                paidProvidersAdapter.submitList(sortedPaid)
+            }
             binding.tvProvidersHeader.visibility =
                 if (free.isNotEmpty() || paid.isNotEmpty()) View.VISIBLE else View.GONE
             binding.tvProvidersFreeLabel.visibility = if (free.isNotEmpty()) View.VISIBLE else View.GONE
