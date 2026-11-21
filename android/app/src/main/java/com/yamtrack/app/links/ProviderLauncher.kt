@@ -20,13 +20,19 @@ object ProviderLauncher {
     /**
      * The installed app, not a browser, that claims [link]; null when only
      * browsers do. Needs the manifest's `<queries>` on Android 11+.
+     *
+     * MATCH_ALL: on Android 12+ a query for a web link otherwise leaves out
+     * apps whose links aren't verified on this phone (often streaming apps,
+     * e.g. Disney+), returning only browsers, so the app looked uninstalled
+     * and the link opened in the browser. Launching names the package
+     * (setPackage), which that rule doesn't apply to.
      */
     fun appFor(context: Context, link: String): String? {
         val pm = context.packageManager
         fun handlers(uri: String) = runCatching {
             pm.queryIntentActivities(
                 Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addCategory(Intent.CATEGORY_BROWSABLE),
-                PackageManager.MATCH_DEFAULT_ONLY,
+                PackageManager.MATCH_DEFAULT_ONLY or PackageManager.MATCH_ALL,
             ).map { it.activityInfo.packageName }
         }.getOrDefault(emptyList())
         // Anything that also opens an arbitrary website is a browser.
