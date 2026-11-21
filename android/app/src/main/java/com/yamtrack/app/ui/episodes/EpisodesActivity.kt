@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.yamtrack.app.R
 import com.yamtrack.app.data.model.MediaMeta
 import com.yamtrack.app.data.model.Result
+import com.yamtrack.app.data.model.WatchProvider
 import com.yamtrack.app.databinding.ActivityEpisodesBinding
 import com.yamtrack.app.links.ProviderLauncher
 import com.yamtrack.app.util.fitContentToSystemBars
@@ -138,21 +139,42 @@ class EpisodesActivity : AppCompatActivity() {
                 Toast.makeText(this@EpisodesActivity, R.string.episode_links_failed, Toast.LENGTH_SHORT).show()
                 return@launch
             }
-            val providers = withContext(Dispatchers.Default) {
-                ProviderLauncher.arrange(applicationContext, options.providers)
+            val arranged = withContext(Dispatchers.Default) {
+                ProviderLauncher.arrangeWithApps(applicationContext, options.providers)
             }
+            val providers = arranged.providers
             if (providers.isEmpty()) {
                 Toast.makeText(this@EpisodesActivity, R.string.episode_no_links, Toast.LENGTH_SHORT).show()
                 return@launch
             }
-            val labels = providers.map { p ->
-                val name = p.providerName.orEmpty()
-                val opensShow = options.fromShow || (p.tvLink ?: p.link) in options.showLevel
-                if (opensShow) getString(R.string.provider_opens_show, name) else name
-            }.toTypedArray()
+            fun opensShow(p: WatchProvider) = options.fromShow || (p.tvLink ?: p.link) in options.showLevel
+
+            // Nothing to choose between: one service with its app installed, or
+            // only one service at all. Open it straight away.
+            val only = arranged.withApp.singleOrNull() ?: providers.singleOrNull()
+            if (only != null) {
+                if (opensShow(only)) {
+                    Toast.makeText(
+                        this@EpisodesActivity,
+                        getString(R.string.watch_opening_show, only.providerName.orEmpty()),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                ProviderLauncher.open(this@EpisodesActivity, only, options.regionLink)
+                return@launch
+            }
+
+            val rows = providers.map { p ->
+                val note = when {
+                    opensShow(p) -> getString(R.string.watch_note_opens_show)
+                    p !in arranged.withApp -> getString(R.string.watch_note_browser)
+                    else -> null
+                }
+                WatchOptionsAdapter.Row(p, note)
+            }
             AlertDialog.Builder(this@EpisodesActivity)
                 .setTitle(getString(R.string.watch_episode_on, episode))
-                .setItems(labels) { _, which ->
+                .setAdapter(WatchOptionsAdapter(this@EpisodesActivity, rows)) { _, which ->
                     ProviderLauncher.open(this@EpisodesActivity, providers[which], options.regionLink)
                 }
                 .setNegativeButton(R.string.cancel, null)
