@@ -68,6 +68,42 @@ class ProviderLinksTest {
         )
     }
 
+    @Test fun disneyAffiliateRedirectsAreUnwrapped() {
+        val target = "https://www.disneyplus.com/browse/entity-$uuidA"
+        assertEquals(
+            "https://www.disneyplus.com/play/$uuidA",
+            ProviderLinks.normalize(
+                "https://disneyplus.bn5x.net/c/1/2/3?u=" + java.net.URLEncoder.encode(target, "UTF-8")),
+        )
+        assertEquals(
+            "https://www.disneyplus.com/play/$uuidA",
+            ProviderLinks.normalize("https://www.disneyplus.com/en-GB/browse/entity-$uuidA"),
+        )
+    }
+
+    @Test fun aLinkToTheSameSiteIsNotARedirect() {
+        assertNull(ProviderLinks.unwrap("https://www.example.com/x?u=https%3A%2F%2Fwww.example.com%2Fy"))
+        assertNull(ProviderLinks.unwrap("https://tubitv.com/movies/123?u=abc"))
+    }
+
+    @Test fun theWebLinkIsTriedAfterTheTvLink() {
+        val p = WatchProvider(
+            link = "https://www.disneyplus.com/browse/entity-$uuidA",
+            tvLink = "https://www.disneyplus.com/series/andor/3jLIGMDYINqD",
+        )
+        assertEquals(
+            listOf("https://www.disneyplus.com/series/andor/3jLIGMDYINqD", "https://www.disneyplus.com/play/$uuidA"),
+            ProviderLinks.appCandidates(p),
+        )
+    }
+
+    @Test fun servicesAppsAreKnownBySite() {
+        assertEquals("com.disney.disneyplus", ProviderLinks.knownApp("https://www.disneyplus.com/play/$uuidA"))
+        assertEquals("com.wbd.stream", ProviderLinks.knownApp("https://play.hbomax.com/video/watch/$uuidA"))
+        assertNull(ProviderLinks.knownApp("https://example.com/"))
+        assertNull(ProviderLinks.knownApp("https://notdisneyplus.com/"))
+    }
+
     @Test fun peacockDetailDeeplinksBecomePlay() {
         val pdp = "https://www.peacocktv.com/deeplink?deeplinkData=" +
             "%7B%22pvid%22%3A%22abc%22%2C%22type%22%3A%22PROGRAMME%22%2C%22action%22%3A%22PDP%22%7D"

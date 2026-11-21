@@ -17,10 +17,12 @@ object ProviderLinks {
     private const val Q = "(?:[/?#].*)?$"
     private const val UUID = "([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
 
-    private val REDIRECT = Regex("""^https?://(?:[a-z0-9-]+\.)*(?:pxf|sjv)\.io/[^?#]*\?([^#]*)(?:#.*)?$""")
+    /** Any link with a query, for affiliate redirects: host, then the query. */
+    private val REDIRECT = Regex("""^https?://([^/?#]+)[^?#]*\?([^#]*)(?:#.*)?$""")
+    private val HOST = Regex("""^https?://([^/?#]+)""")
     private val HBO = Regex("^https?://(?:www\\.|play\\.)?(?:hbo)?max\\.com/video/watch/($UUID(?:/$UUID)?)$Q")
     private val DISCOVERY = Regex("^https?://(?:www\\.|play\\.)?discoveryplus\\.com/video/watch/($UUID(?:/$UUID)?)$Q")
-    private val DISNEY = Regex("^https?://(?:www\\.)?disneyplus\\.com/(?:[a-z]{2}-[a-z]{2}/)?(?:play/|browse/entity-)$UUID$Q")
+    private val DISNEY = Regex("^https?://(?:www\\.)?disneyplus\\.com/(?:[a-zA-Z]{2}-[a-zA-Z]{2}/)?(?:play/|browse/entity-)$UUID$Q")
     private val NETFLIX = Regex("^https?://(?:www\\.)?netflix\\.com/(?:[a-z]{2}(?:-[a-z]{2})?/)?(?:title|watch)/(\\d+)$Q")
     private val STARZ = Regex("^https?://(?:www\\.)?starz\\.com/([a-z]{2})/([a-z]{2})/(?:play|movies)/(\\d+)$Q")
     private val STARZ_TV = Regex("^https?://(?:www\\.)?starz\\.com/(movies|series)/(\\d+)(/episodes/(\\d+))?$Q")
@@ -35,6 +37,44 @@ object ProviderLinks {
     /** The link to open in the service's app: `tv_link` (starts the title), else `link`. */
     fun appLink(p: WatchProvider): String? =
         (p.tvLink ?: p.link)?.takeIf { it.isNotBlank() }?.let(::normalize)
+
+    /**
+     * Every link to try in the service's app, best first: `tv_link` and `link`
+     * in their playing forms, each followed by its [alternatives]. A TV link
+     * the phone app doesn't claim falls back to the web link that it may.
+     */
+    fun appCandidates(p: WatchProvider): List<String> =
+        listOfNotNull(p.tvLink, p.link)
+            .filter { it.isNotBlank() }
+            .map(::normalize)
+            .flatMap { listOf(it) + alternatives(it) }
+            .distinct()
+
+    /** Phone apps of services, by the sites their links are on. */
+    private val APPS = listOf(
+        "disneyplus.com" to "com.disney.disneyplus",
+        "netflix.com" to "com.netflix.mediaclient",
+        "hbomax.com" to "com.wbd.stream",
+        "max.com" to "com.wbd.stream",
+        "discoveryplus.com" to "com.discovery.discoveryplus.mobile",
+        "hulu.com" to "com.hulu.plus",
+        "peacocktv.com" to "com.peacocktv.peacockandroid",
+        "paramountplus.com" to "com.cbs.app",
+        "crunchyroll.com" to "com.crunchyroll.crunchyroid",
+        "starz.com" to "com.bydeluxe.d3.android.program.starz",
+        "tubitv.com" to "com.tubitv",
+        "pluto.tv" to "tv.pluto.android",
+    )
+
+    /**
+     * The service's phone app for [link]'s site, or null. Tried by package
+     * when the app doesn't say it opens the link (its own link filter
+     * doesn't list that path), as it may still take it.
+     */
+    fun knownApp(link: String): String? {
+        val host = HOST.find(link)?.groupValues?.get(1)?.lowercase() ?: return null
+        return APPS.firstOrNull { (site, _) -> host == site || host.endsWith(".$site") }?.second
+    }
 
     /** The link to open in a browser when no app claims one: the web link. */
     fun webLink(p: WatchProvider): String? =
@@ -83,12 +123,20 @@ object ProviderLinks {
         return text
     }
 
-    /** The real link inside an affiliate redirect (pxf.io, sjv.io), or null. */
+    /**
+     * The real link inside an affiliate redirect, or null: a `u=` (or `url=`)
+     * parameter holding a link to another site, as with Impact's pxf.io,
+     * sjv.io and bn5x.net (Disney+) hosts.
+     */
     fun unwrap(link: String): String? {
-        val query = REDIRECT.matchEntire(link)?.groupValues?.get(1) ?: return null
-        val u = query.split('&').firstOrNull { it.startsWith("u=") } ?: return null
-        return runCatching { URLDecoder.decode(u.substring(2), "UTF-8") }.getOrNull()
-            ?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+        val m = REDIRECT.matchEntire(link) ?: return null
+        val host = m.groupValues[1].lowercase()
+        val param = m.groupValues[2].split('&')
+            .firstOrNull { it.startsWith("u=") || it.startsWith("url=") } ?: return null
+        val target = runCatching { URLDecoder.decode(param.substringAfter('='), "UTF-8") }.getOrNull()
+            ?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return null
+        val targetHost = HOST.find(target)?.groupValues?.get(1)?.lowercase() ?: return null
+        return target.takeIf { targetHost != host }
     }
 
     /** Peacock's deeplink that plays [pvid] rather than showing its page. */

@@ -20,13 +20,19 @@ object ProviderLauncher {
     /**
      * The installed app, not a browser, that claims [link]; null when only
      * browsers do. Needs the manifest's `<queries>` on Android 11+.
+     *
+     * MATCH_ALL: on Android 12+ a query for a web link otherwise leaves out
+     * apps whose links aren't verified on this phone (often streaming apps,
+     * e.g. Disney+), returning only browsers, so the app looked uninstalled
+     * and the link opened in the browser. Launching names the package
+     * (setPackage), which that rule doesn't apply to.
      */
     fun appFor(context: Context, link: String): String? {
         val pm = context.packageManager
         fun handlers(uri: String) = runCatching {
             pm.queryIntentActivities(
                 Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addCategory(Intent.CATEGORY_BROWSABLE),
-                PackageManager.MATCH_DEFAULT_ONLY,
+                PackageManager.MATCH_DEFAULT_ONLY or PackageManager.MATCH_ALL,
             ).map { it.activityInfo.packageName }
         }.getOrDefault(emptyList())
         // Anything that also opens an arbitrary website is a browser.
@@ -34,27 +40,40 @@ object ProviderLauncher {
         return handlers(link).distinct().firstOrNull { it !in browsers && it != context.packageName }
     }
 
-    /** Whether [provider]'s link opens an installed app (not a browser). */
-    fun hasApp(context: Context, provider: WatchProvider): Boolean {
-        val link = ProviderLinks.appLink(provider) ?: return false
-        return (listOf(link) + ProviderLinks.alternatives(link)).any { appFor(context, it) != null }
-    }
+    /** Whether [pkg] is installed (seen through the manifest's launcher `<queries>`). */
+    private fun installed(context: Context, pkg: String): Boolean =
+        runCatching { context.packageManager.getLaunchIntentForPackage(pkg) != null }.getOrDefault(false)
 
     /**
-     * Opens [provider]: its app with the link that plays (trying other forms
-     * the app may claim), else its web page, else [fallback] (TMDB's page).
+     * The links to try and the app for each, best first: apps that say they
+     * open a link, then each link's known service app when it's installed,
+     * as some (Disney+) don't list every path they take.
+     */
+    private fun attempts(context: Context, provider: WatchProvider): List<Pair<String, String>> {
+        val links = ProviderLinks.appCandidates(provider)
+        val claimed = links.mapNotNull { link -> appFor(context, link)?.let { link to it } }
+        val known = links.mapNotNull { link ->
+            ProviderLinks.knownApp(link)?.takeIf { installed(context, it) }?.let { link to it }
+        }
+        return (claimed + known).distinct()
+    }
+
+    /** Whether [provider]'s link opens an installed app (not a browser). */
+    fun hasApp(context: Context, provider: WatchProvider): Boolean = attempts(context, provider).isNotEmpty()
+
+    /**
+     * Opens [provider]: its app with the link that plays (trying the TV link,
+     * the web link and other forms the app may take), else its web page,
+     * else [fallback] (TMDB's page).
      */
     fun open(context: Context, provider: WatchProvider, fallback: String?) {
-        ProviderLinks.appLink(provider)?.let { first ->
-            for (candidate in listOf(first) + ProviderLinks.alternatives(first)) {
-                val pkg = appFor(context, candidate) ?: continue
-                // An explicit package skips Android 12+'s verified-domain rule, and a
-                // fresh task stops an already-open app from ignoring the link.
-                val flags = if (pkg in PLAIN_LAUNCH) Intent.FLAG_ACTIVITY_NEW_TASK
-                else Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(candidate)).setPackage(pkg).addFlags(flags)
-                if (runCatching { context.startActivity(intent) }.isSuccess) return
-            }
+        for ((link, pkg) in attempts(context, provider)) {
+            // An explicit package skips Android 12+'s verified-domain rule, and a
+            // fresh task stops an already-open app from ignoring the link.
+            val flags = if (pkg in PLAIN_LAUNCH) Intent.FLAG_ACTIVITY_NEW_TASK
+            else Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link)).setPackage(pkg).addFlags(flags)
+            if (runCatching { context.startActivity(intent) }.isSuccess) return
         }
         // No app takes any form of it: the web page in a browser.
         openInBrowser(context, ProviderLinks.webLink(provider) ?: fallback)
