@@ -25,7 +25,7 @@ android {
         // Local builds keep 2: never upload those to Play.
         def ciVersionCode = System.getenv("APP_VERSION_CODE")
         versionCode ciVersionCode ? ciVersionCode.toInteger() : 2
-        versionName "Beta 0.0.8"
+        versionName "Beta 0.0.9"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
